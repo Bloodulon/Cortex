@@ -1,12 +1,13 @@
 import os
+import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv() 
 
-BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN не задан в .env файле!")
+    raise ValueError("BOT_TOKEN не найден! Проверь переменные в панели Railway.")
 
 POINTS = {
     "easy":   10,
