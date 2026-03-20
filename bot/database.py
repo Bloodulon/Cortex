@@ -57,3 +57,13 @@ async def get_leaderboard(pool, limit: int = 10) -> list:
             LIMIT $1
         """, limit)
         return [dict(r) for r in rows]
+
+async def get_accuracy(pool, user_id):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT correct_answers, total_answers FROM users WHERE user_id = $1", 
+            user_id
+        )
+        if not row or row["total_answers"] == 0:
+            return 0.0
+        return (row["correct_answers"] / row["total_answers"]) * 100
