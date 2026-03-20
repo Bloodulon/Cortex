@@ -14,8 +14,9 @@ app.add_middleware(
 
 # ── Получить статистику пользователя ──────────
 @app.get("/stats/{user_id}")
-def get_stats(user_id: int):
-    stats = db.get_user(user_id)
+async def get_stats(user_id: int):
+    pool = app.state.db_pool
+    stats = await db.get_user(pool, user_id)
     if not stats:
         raise HTTPException(status_code=404, detail="User not found")
     accuracy = db.get_accuracy(user_id)

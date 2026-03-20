@@ -163,12 +163,12 @@ async def cb_howto(cb: CallbackQuery):
 # ─── Статистика ───────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "stats")
-async def cb_stats(cb: CallbackQuery):
+async def cb_stats(cb: CallbackQuery, db_pool): # Добавляем аргумент db_pool
+    stats = await db.get_user(db_pool, cb.from_user.id)
     user_id = cb.from_user.id
     stats = db.get_user(user_id)
     accuracy = db.get_accuracy(user_id)
 
-    # Значок уровня по очкам
     score = stats["total_score"]
     if score < 50:
         rank = "🐣 Новичок"

@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import uvicorn
-
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -15,15 +14,16 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-async def run_bot():
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
-    dp.include_router(router)
+async def run_bot(dp: Dispatcher, bot: Bot):
+    """Запуск Telegram бота"""
+    logging.info("Starting Telegram Bot...")
     await dp.start_polling(bot)
 
-async def run_api():
+async def run_api(app):
+    """Запуск FastAPI сервера"""
+    logging.info("Starting FastAPI Server...")
     config = uvicorn.Config(
-        app=fastapi_app,
+        app=app,
         host="0.0.0.0",
         port=8000,
         log_level="info",
@@ -32,8 +32,29 @@ async def run_api():
     await server.serve()
 
 async def main():
-    db.init_db()
-    await asyncio.gather(run_bot(), run_api())
+    pool = await db.get_pool()
+
+    await db.init_db(pool)
+
+    bot = Bot(token=BOT_TOKEN)
+    dp = Dispatcher(storage=MemoryStorage(), db_pool=pool)
+    dp.include_router(router)
+
+    fastapi_app.state.db_pool = pool
+
+    try:
+        await asyncio.gather(
+            run_bot(dp, bot),
+            run_api(fastapi_app)
+        )
+    except Exception as e:
+        logging.error(f"Error in main loop: {e}")
+    finally:
+        await pool.close()
+        logging.info("Database pool closed.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Bot stopped!")

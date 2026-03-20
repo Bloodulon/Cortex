@@ -1,5 +1,7 @@
 FROM python:3.12-slim
 
+RUN apt-get update && apt-get install -path -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 RUN pip install --no-cache-dir \
@@ -7,8 +9,10 @@ RUN pip install --no-cache-dir \
     "python-dotenv==1.0.1" \
     "fastapi==0.115.0" \
     "uvicorn==0.32.0" \
-    "psycopg2-binary==2.9.9"
+    "asyncpg==0.29.0"
 
 COPY . .
 
 EXPOSE 8000
+
+CMD ["python", "main.py"]

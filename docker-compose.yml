@@ -1,17 +1,25 @@
+version: '3.8'
+
 services:
-  bot:
+  app:
     build: ./bot
-    restart: unless-stopped
-    env_file: ./bot/.env
-    volumes:
-      - ./bot:/app
+    restart: always
     ports:
       - "8000:8000"
+    env_file:
+      - ./bot/.env
+    depends_on:
+      - db
 
-  frontend:
-    image: nginx:alpine
-    restart: unless-stopped
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-quiz_db}
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-    ports:
-      - "3000:80"
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
