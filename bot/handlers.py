@@ -162,8 +162,8 @@ async def cb_howto(cb: CallbackQuery):
 
 # ─── Статистика ───────────────────────────────────────────────────────────────
 
-@router.callback_query(F.data == "stats")
-async def cb_stats(cb: CallbackQuery, db_pool): # Добавляем аргумент db_pool
+@router.callback_query(QuizState.answering, F.data.startswith("answer_"))
+async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool):
     stats = await db.get_user(db_pool, cb.from_user.id)
     user_id = cb.from_user.id
     stats = db.get_user(user_id)
