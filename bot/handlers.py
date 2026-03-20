@@ -272,7 +272,7 @@ async def cb_give_up(cb: CallbackQuery, state: FSMContext):
 # ─── Ответ на вопрос ──────────────────────────────────────────────────────────
 
 @router.callback_query(QuizState.answering, F.data.startswith("answer_"))
-async def cb_answer(cb: CallbackQuery, state: FSMContext):
+async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool): 
     data = await state.get_data()
     questions: list[dict] = data["questions"]
     idx: int = data["current_index"]
@@ -285,7 +285,6 @@ async def cb_answer(cb: CallbackQuery, state: FSMContext):
     is_correct = (chosen == q["answer"])
 
     if is_correct:
-        # Определяем множитель для микса по уровню конкретного вопроса
         actual_level = q["level"] if level == "mix" else level
         earned = POINTS[actual_level]
         score += earned
@@ -296,7 +295,7 @@ async def cb_answer(cb: CallbackQuery, state: FSMContext):
         correct_option = q["options"][q["answer"]]
         header = f"❌ <b>Неверно.</b>\nПравильный ответ: <b>{correct_option}</b>"
 
-    db.update_score(cb.from_user.id, earned, correct=is_correct)
+    await db.update_score(db_pool, cb.from_user.id, earned, is_correct)
 
     text = (
         f"{header}\n\n"
