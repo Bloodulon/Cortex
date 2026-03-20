@@ -2,6 +2,8 @@ import os
 import asyncpg
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
 async def get_pool():
     return await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)

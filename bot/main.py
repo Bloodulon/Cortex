@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -8,6 +9,7 @@ from config import BOT_TOKEN
 from handlers import router
 from api import app as fastapi_app
 import database as db
+PORT = int(os.environ.get("PORT", 8000))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,12 +22,10 @@ async def run_bot(dp: Dispatcher, bot: Bot):
     await dp.start_polling(bot)
 
 async def run_api(app):
-    """Запуск FastAPI сервера"""
-    logging.info("Starting FastAPI Server...")
     config = uvicorn.Config(
         app=app,
-        host="0.0.0.0",
-        port=8000,
+        host="0.0.0.0", 
+        port=PORT,
         log_level="info",
     )
     server = uvicorn.Server(config)
