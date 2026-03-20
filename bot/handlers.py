@@ -162,12 +162,12 @@ async def cb_howto(cb: CallbackQuery):
 
 # ─── Статистика ───────────────────────────────────────────────────────────────
 
-@router.callback_query(QuizState.answering, F.data.startswith("answer_"))
-async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool):
-    stats = await db.get_user(db_pool, cb.from_user.id)
+@router.callback_query(F.data == "stats")
+async def cb_stats(cb: CallbackQuery, db_pool):
     user_id = cb.from_user.id
-    stats = db.get_user(user_id)
-    accuracy = db.get_accuracy(user_id)
+    # Используем await и передаем db_pool
+    stats = await db.get_user(db_pool, user_id)
+    accuracy = await db.get_accuracy(db_pool, user_id)
 
     score = stats["total_score"]
     if score < 50:
@@ -243,20 +243,20 @@ async def cb_hint(cb: CallbackQuery, state: FSMContext):
     await state.update_data(hint_used=True, score=score)
 
     await cb.answer(f"💡 {q['hint']}", show_alert=True)
-    # Обновить клавиатуру (убрать кнопку подсказки)
     await send_question(cb, state, edit=True)
 
 
 # ─── Сдаться ──────────────────────────────────────────────────────────────────
 
 @router.callback_query(QuizState.answering, F.data == "give_up")
-async def cb_give_up(cb: CallbackQuery, state: FSMContext):
+async def cb_give_up(cb: CallbackQuery, state: FSMContext, db_pool):
     data = await state.get_data()
     q = data["questions"][data["current_index"]]
     correct_option = q["options"][q["answer"]]
 
-    db.update_score(cb.from_user.id, 0, correct=False)
-    db.finish_game(cb.from_user.id)
+    # Используем await и передаем db_pool
+    await db.update_score(db_pool, cb.from_user.id, 0, False)
+    await db.finish_game(db_pool, cb.from_user.id)
 
     text = (
         f"🏳 <b>Игра завершена досрочно</b>\n\n"
@@ -295,6 +295,7 @@ async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool):
         correct_option = q["options"][q["answer"]]
         header = f"❌ <b>Неверно.</b>\nПравильный ответ: <b>{correct_option}</b>"
 
+    # Вызов к базе работает правильно
     await db.update_score(db_pool, cb.from_user.id, earned, is_correct)
 
     text = (
@@ -334,9 +335,10 @@ async def cb_next_question(cb: CallbackQuery, state: FSMContext):
 # ─── Досрочное завершение из after_answer ─────────────────────────────────────
 
 @router.callback_query(QuizState.answering, F.data == "end_game")
-async def cb_end_game(cb: CallbackQuery, state: FSMContext):
+async def cb_end_game(cb: CallbackQuery, state: FSMContext, db_pool):
     data = await state.get_data()
-    db.finish_game(cb.from_user.id)
+    # Используем await и передаем db_pool
+    await db.finish_game(db_pool, cb.from_user.id)
     score = data["score"]
     done = data["current_index"] + 1
     correct = data.get("correct_in_round", 0)
@@ -354,13 +356,14 @@ async def cb_end_game(cb: CallbackQuery, state: FSMContext):
 # ─── Итоги раунда ─────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "show_results")
-async def cb_show_results(cb: CallbackQuery, state: FSMContext):
+async def cb_show_results(cb: CallbackQuery, state: FSMContext, db_pool):
     data = await state.get_data()
     score = data.get("score", 0)
     total = len(data.get("questions", []))
     correct = data.get("correct_in_round", 0)
 
-    db.finish_game(cb.from_user.id)
+    # Используем await и передаем db_pool
+    await db.finish_game(db_pool, cb.from_user.id)
     accuracy = correct / total * 100 if total else 0
 
     if accuracy == 100:
@@ -396,10 +399,11 @@ async def cb_show_results(cb: CallbackQuery, state: FSMContext):
 # ─── /stats shortcut ──────────────────────────────────────────────────────────
 
 @router.message(Command("stats"))
-async def cmd_stats(message: Message):
+async def cmd_stats(message: Message, db_pool):
     user_id = message.from_user.id
-    stats = db.get_user(user_id)
-    accuracy = db.get_accuracy(user_id)
+    # Используем await и передаем db_pool
+    stats = await db.get_user(db_pool, user_id)
+    accuracy = await db.get_accuracy(db_pool, user_id)
     await message.answer(
         f"📊 Очки: <b>{stats['total_score']}</b> | "
         f"Игр: <b>{stats['games_played']}</b> | "
