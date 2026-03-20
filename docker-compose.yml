@@ -1,9 +1,17 @@
 services:
   bot:
-    build: .
-    container_name: tg_ai_quiz_bot
+    build: ./bot
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: ./bot/.env
     volumes:
-      - .:/app
+      - ./bot:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "3000:80"
