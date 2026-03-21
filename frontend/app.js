@@ -5,6 +5,26 @@
 const API_BASE_URL = "https://cortex-production-8ae8.up.railway.app";
 const PAGES = ["practice", "courses", "dictionary", "rating", "profile"];
 
+// Вопросы загружаются из questions.json
+let QUIZ_QUESTIONS = [];
+
+// ── Загрузка вопросов из JSON ─────────────
+async function loadQuestions() {
+  try {
+    const res = await fetch("./questions.json");
+    QUIZ_QUESTIONS = await res.json();
+    console.log(`[Quiz] Загружено ${QUIZ_QUESTIONS.length} вопросов`);
+  } catch (e) {
+    console.error("[Quiz] Ошибка загрузки questions.json:", e);
+    // Fallback — минимальный набор
+    QUIZ_QUESTIONS = [
+      { id:"q1", level:"easy",   question:"Что означает аббревиатура AI?",            options:["Automated Internet","Artificial Intelligence","Advanced Integration","Automatic Input"],   answer:1, explanation:"AI = Artificial Intelligence — искусственный интеллект." },
+      { id:"q2", level:"medium", question:"Что такое переобучение (overfitting)?",    options:["Модель медленно учится","Хорошо на трейне, плохо на новых данных","Много памяти","Долго обучалась"], answer:1, explanation:"Overfitting — модель запомнила данные вместо паттернов." },
+      { id:"q3", level:"hard",   question:"Что такое RLHF?",                           options:["Reinforcement Learning from Human Feedback","Recursive Layer Hyperparameter Framework","Regularized Loss Heuristic Functions","Real-time Learning High Fidelity"], answer:0, explanation:"RLHF — обучение с подкреплением на основе обратной связи людей." },
+    ];
+  }
+}
+
 // ── API ──────────────────────────────────────
 async function apiRequest(endpoint, options = {}) {
   try {
@@ -43,7 +63,11 @@ function setEl(id, val) {
   if (el) el.textContent = val;
 }
 
-// Аватар — фото или инициалы
+function getInitials(name) {
+  if (!name) return "?";
+  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
 function setAvatar(wrapId, photoUrl, name) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
@@ -54,25 +78,19 @@ function setAvatar(wrapId, photoUrl, name) {
   }
 }
 
-function getInitials(name) {
-  if (!name) return "?";
-  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-// ── Прокрутка вниз ───────────────────────────
+// ── Скролл — ТОЛЬКО контейнер сообщений ─────
 function scrollToBottom() {
-  // Скроллим и весь экран и контейнер сообщений
-  const el = document.getElementById("quiz-messages");
-  if (el) {
-    el.scrollTop = el.scrollHeight;
-  }
-  // Также скроллим основную страницу
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  setTimeout(() => {
+    const el = document.getElementById("quiz-messages");
+    if (el) {
+      el.scrollIntoView({ block: "end" });
+      el.scrollTop = el.scrollHeight;
+    }
+  }, 80);
 }
 
 // ── Navigation ───────────────────────────────
 function navigate(page) {
-  // Если открыта викторина — закрываем без скролла
   const qc = document.getElementById("quiz-content");
   if (qc && !qc.classList.contains("hidden")) {
     quizClose(false);
@@ -95,12 +113,11 @@ function navigate(page) {
   if (page === "profile" && window.telegramUserId) loadProfileStats(window.telegramUserId);
 }
 
-// ── Quiz внутри Practice ─────────────────────
+// ── Quiz ─────────────────────────────────────
 function quizOpen() {
   document.getElementById("practice-content").classList.add("hidden");
   document.getElementById("quiz-content").classList.remove("hidden");
 
-  // Переключаем хедер
   const hd = document.getElementById("header-default");
   const hq = document.getElementById("header-quiz");
   if (hd) { hd.classList.add("hidden"); hd.classList.remove("flex"); }
@@ -117,7 +134,6 @@ function quizClose(scroll = true) {
   qc.classList.add("hidden");
   pc.classList.remove("hidden");
 
-  // Возвращаем хедер
   const hd = document.getElementById("header-default");
   const hq = document.getElementById("header-quiz");
   if (hq) { hq.classList.add("hidden"); hq.classList.remove("flex"); }
@@ -135,54 +151,58 @@ function dictToggle(tab) {
 
 // ── Telegram init ────────────────────────────
 function initTelegram() {
-  // Пробуем получить данные из Telegram WebApp
   let user = null;
-  let photoUrl = null;
 
   try {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.ready();
       tg.expand();
+      // Пробуем оба способа получить данные
       user = tg.initDataUnsafe?.user || null;
     }
   } catch (e) {
     console.warn("Telegram init error:", e);
   }
 
-  if (user) {
+  if (user && user.id) {
     window.telegramUserId = user.id;
-    photoUrl = user.photo_url || null;
+    const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username || "Пользователь";
+    const photoUrl = user.photo_url || null;
 
-    const name = [user.first_name, user.last_name].filter(Boolean).join(" ");
-
-    // Имя везде
-    document.querySelectorAll(".tg-username").forEach(el => el.textContent = name || user.username || "—");
-
-    // Аватарки
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = name);
     setAvatar("practice-avatar-wrap", photoUrl, name);
     setAvatar("profile-avatar-wrap",  photoUrl, name);
 
-    // Загружаем данные
     loadUserStats(user.id);
     loadProfileStats(user.id);
 
   } else {
-    // Нет данных Telegram — показываем заглушки и пробуем без userId
-    console.warn("Telegram user not available");
-    document.querySelectorAll(".tg-username").forEach(el => el.textContent = "Гость");
-    setAvatar("practice-avatar-wrap", null, "Гость");
-    setAvatar("profile-avatar-wrap",  null, "Гость");
+    // Данные TG недоступны — показываем заглушки
+    // Это нормально при открытии в браузере (не через бота)
+    console.warn("Telegram user unavailable — running in browser mode");
 
-    // Показываем нулевые значения
-    setEl("header-xp", "0 XP");
-    setEl("practice-level-badge", "LVL 1");
-    setEl("practice-rank", "🐣 Новичок");
-    setEl("daily-label", "0");
-    setEl("practice-games", "0 игр");
-    setEl("practice-score", "0 XP");
-    setEl("practice-accuracy", "0%");
-    setEl("streak-label", "Серия: 0 игр");
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = "Пользователь");
+    setAvatar("practice-avatar-wrap", null, "П");
+    setAvatar("profile-avatar-wrap",  null, "П");
+
+    setEl("header-xp",           "0 XP");
+    setEl("practice-level-badge","LVL 1");
+    setEl("practice-rank",       "🐣 Новичок");
+    setEl("daily-label",         "0");
+    setEl("practice-games",      "0 игр");
+    setEl("practice-score",      "0 XP");
+    setEl("practice-accuracy",   "0%");
+    setEl("streak-label",        "Начни игру!");
+
+    setEl("profile-xp",          "0");
+    setEl("profile-games",       "0");
+    setEl("profile-accuracy",    "0%");
+    setEl("profile-xp-label",    "0 / 2000 XP");
+    setEl("profile-level-badge", "LVL 1");
+    setEl("profile-rank-label",  "🐣 Новичок");
+    setEl("profile-daily-pct",   "0%");
+    setEl("profile-balance",     "0 монет");
   }
 }
 
@@ -195,34 +215,27 @@ async function loadUserStats(userId) {
   const level = getLevel(score);
   const rank  = getRankLabel(score);
 
-  // Хедер
-  setEl("header-xp", score.toLocaleString() + " XP");
-
-  // Practice
+  setEl("header-xp",            score.toLocaleString() + " XP");
   setEl("practice-level-badge", "LVL " + level);
-  setEl("practice-rank", rank);
-  setEl("practice-games", stats.games_played + " игр");
-  setEl("practice-score", score.toLocaleString() + " XP");
-  setEl("practice-accuracy", stats.accuracy + "%");
-  setEl("streak-label", "Серия: " + stats.games_played + " игр");
+  setEl("practice-rank",        rank);
+  setEl("practice-games",       stats.games_played + " игр");
+  setEl("practice-score",       score.toLocaleString() + " XP");
+  setEl("practice-accuracy",    stats.accuracy + "%");
+  setEl("streak-label",         "Серия: " + stats.games_played + " игр");
 
   const accBar = document.getElementById("practice-accuracy-bar");
   if (accBar) accBar.style.width = Math.min(stats.accuracy, 100) + "%";
 
-  // Дневная цель
   const done = stats.total_answers % 10;
   setEl("daily-label", done);
   const dp = document.getElementById("daily-progress");
   if (dp) dp.style.width = (done / 10 * 100) + "%";
 
-  // Словарь
-  setEl("dict-streak", stats.games_played + " игр");
-
-  // Рейтинг — моя позиция
-  setEl("my-rank-score", score.toLocaleString() + " XP");
+  setEl("dict-streak",    stats.games_played + " игр");
+  setEl("my-rank-score",  score.toLocaleString() + " XP");
 }
 
-// ── Загрузка профиля ─────────────────────────
+// ── Профиль ──────────────────────────────────
 async function loadProfileStats(userId) {
   const stats = await getUserStats(userId);
   if (!stats) return;
@@ -248,7 +261,7 @@ async function loadProfileStats(userId) {
   if (lvlBar) lvlBar.style.width = pct + "%";
 }
 
-// ── Загрузка лидерборда ──────────────────────
+// ── Лидерборд ────────────────────────────────
 async function loadLeaderboard() {
   const container = document.getElementById("leaderboard-list");
   if (!container) return;
@@ -258,25 +271,26 @@ async function loadLeaderboard() {
   const rows = await getLeaderboard();
 
   if (!rows || !rows.length) {
-    container.innerHTML = `<div class="flex items-center justify-center py-8 text-on-surface-variant text-sm font-mono">Нет данных</div>`;
+    container.innerHTML = `<div class="flex items-center justify-center py-8 text-on-surface-variant text-sm font-mono">Пока никого нет — сыграй первым!</div>`;
     return;
   }
 
-  // Найти позицию текущего пользователя
   const myRow = rows.find(r => r.user_id === window.telegramUserId);
   if (myRow) setEl("my-rank-pos", "#" + myRow.position);
 
+  const medal = ["🥇","🥈","🥉"];
   container.innerHTML = rows.map((r, i) => {
     const rankClass = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "text-on-surface-variant";
     const isMe = r.user_id === window.telegramUserId;
-    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
     return `
-      <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 card-hover ${isMe ? "border border-primary/40 bg-primary/5" : ""}">
-        <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${medal || r.position}</span>
-        <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-xs font-bold ${isMe ? "bg-primary/20 text-primary" : "text-on-surface-variant"}">
-          ${isMe ? "Вы" : (r.position <= 3 ? "★" : r.position)}
+      <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 ${isMe ? "border border-primary/40 bg-primary/5" : ""}">
+        <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${medal[i] || r.position}</span>
+        <div class="w-8 h-8 rounded-full ${isMe ? "bg-primary/20" : "bg-surface-container"} flex items-center justify-center shrink-0 text-xs font-bold ${isMe ? "text-primary" : "text-on-surface-variant"}">
+          ${isMe ? "Вы" : "?"}
         </div>
-        <p class="flex-1 text-sm font-medium ${isMe ? "text-primary font-bold" : ""}">${isMe ? "Вы" : "User_" + String(r.user_id).slice(-4)}</p>
+        <p class="flex-1 text-sm font-medium ${isMe ? "text-primary font-bold" : ""}">
+          ${isMe ? "Вы" : "User_" + String(r.user_id).slice(-4)}
+        </p>
         <span class="${rankClass} text-sm font-mono font-bold">${r.score.toLocaleString()} XP</span>
       </div>`;
   }).join("");
@@ -286,25 +300,16 @@ async function loadLeaderboard() {
 //  QUIZ
 // ══════════════════════════════════════════
 
-const QUIZ_CONFIG = { questionsPerRound: 5, points: { easy: 10, medium: 20, hard: 40 } };
+const QUIZ_CONFIG = {
+  questionsPerRound: 5,
+  points: { easy: 10, medium: 20, hard: 40 },
+};
 
-// Глобальный счёт викторины — не сбрасывается при повторном открытии
 let quizState = {
   questions: [], currentIndex: 0,
   score: 0, correctCount: 0,
-  locked: false, started: false
+  locked: false,
 };
-
-const QUIZ_QUESTIONS = [
-  { id:"q1", level:"easy",   question:"Что такое нейронная сеть?",                          options:["Сеть интернет-провайдеров","Математическая модель, вдохновлённая работой мозга","Протокол передачи данных","Антивирусная программа"],       answer:1, explanation:"Нейронная сеть — набор алгоритмов, смоделированных по образцу мозга." },
-  { id:"q2", level:"easy",   question:"Что означает аббревиатура 'AI'?",                    options:["Automated Internet","Artificial Intelligence","Advanced Integration","Automatic Input"],                                                   answer:1, explanation:"AI = Artificial Intelligence — искусственный интеллект." },
-  { id:"q3", level:"medium", question:"Что такое 'переобучение' (overfitting)?",            options:["Модель медленно обучается","Отлично на обучающих данных, плохо на новых","Использует много памяти","Обучалась слишком долго"],              answer:1, explanation:"Overfitting — модель запомнила данные вместо паттернов." },
-  { id:"q4", level:"medium", question:"Какая функция активации популярна в скрытых слоях?", options:["Sigmoid","Tanh","ReLU","Softmax"],                                                                                                        answer:2, explanation:"ReLU решает проблему затухающих градиентов." },
-  { id:"q5", level:"hard",   question:"Что такое 'hallucination' в LLM?",                   options:["Генерация плохих изображений","Модель уверенно выдаёт ложную информацию","Ошибка обучения","Дублирование токенов"],                       answer:1, explanation:"Галлюцинации — правдоподобная, но неверная информация." },
-  { id:"q6", level:"hard",   question:"Что такое RLHF?",                                    options:["Reinforcement Learning from Human Feedback","Recursive Layer Hyperparameter Framework","Regularized Loss with Heuristic Functions","Real-time Learning High Fidelity"], answer:0, explanation:"RLHF — обучение с подкреплением на основе обратной связи людей." },
-  { id:"q7", level:"easy",   question:"Что такое машинное обучение (ML)?",                  options:["Обучение людей с машинами","Раздел AI, где системы учатся на данных","Производство роботов","Язык программирования"],                     answer:1, explanation:"ML — алгоритмы улучшаются через опыт." },
-  { id:"q8", level:"medium", question:"Что такое Transformer в AI?",                        options:["Электрический трансформатор","Архитектура нейросетей на основе внимания","Метод сжатия данных","Алгоритм сортировки"],                    answer:1, explanation:"Transformer — архитектура на self-attention, основа GPT и BERT." },
-];
 
 function shuffleArray(arr) {
   const a = [...arr];
@@ -316,16 +321,24 @@ function shuffleArray(arr) {
 }
 
 function quizStart() {
+  if (!QUIZ_QUESTIONS.length) {
+    addBotMessage("Вопросы ещё загружаются, попробуй через секунду...");
+    return;
+  }
+
   quizState = {
     questions: shuffleArray(QUIZ_QUESTIONS).slice(0, QUIZ_CONFIG.questionsPerRound),
-    currentIndex: 0, score: 0, correctCount: 0, locked: false, started: true
+    currentIndex: 0, score: 0, correctCount: 0, locked: false,
   };
 
   document.getElementById("quiz-messages").innerHTML = "";
-  setEl("quiz-score", "0 XP");
+  setEl("quiz-score",    "0 XP");
   setEl("quiz-progress", `Вопрос 1/${QUIZ_CONFIG.questionsPerRound}`);
 
-  addBotMessage(`Отлично! Начинаем. Вопрос 1 из ${QUIZ_CONFIG.questionsPerRound}:`);
+  const bar = document.getElementById("quiz-progress-bar");
+  if (bar) bar.style.width = "0%";
+
+  addBotMessage(`Поехали! Вопрос 1 из ${QUIZ_CONFIG.questionsPerRound}:`);
   quizShowQuestion();
 }
 
@@ -348,23 +361,29 @@ function quizShowQuestion() {
       </div>
     </div>`);
 
+  // Варианты ответов — рендерим ПОСЛЕ сообщения
+  renderOptions(q);
+  quizUpdateProgress();
+  scrollToBottom();
+}
+
+function renderOptions(q) {
   const opts = document.getElementById("quiz-options");
   opts.innerHTML = "";
-  opts.className = "glass rounded-xl p-3 border border-white/5 space-y-2";
+  opts.className = "space-y-2";
 
   q.options.forEach((opt, i) => {
     const btn = document.createElement("button");
-    btn.className = "w-full py-3 px-4 bg-surface-container-highest hover:bg-primary/20 border border-white/5 rounded-xl text-sm font-semibold text-left card-hover flex items-center gap-3 transition-all";
-    btn.onclick = () => quizAnswer(i);
+    // Явно задаём pointer-events и z-index
+    btn.type = "button";
+    btn.style.cssText = "position:relative; z-index:10; pointer-events:auto;";
+    btn.className = "w-full py-3 px-4 bg-surface-container-highest border border-white/10 rounded-xl text-sm font-semibold text-left flex items-center gap-3 transition-all active:scale-95";
+    btn.addEventListener("click", () => quizAnswer(i));
     btn.innerHTML = `
       <span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center shrink-0 text-xs font-bold font-mono">${String.fromCharCode(65+i)}</span>
       <span>${opt}</span>`;
     opts.appendChild(btn);
   });
-
-  quizUpdateProgress();
-  // Скролл с небольшой задержкой чтобы DOM обновился
-  setTimeout(scrollToBottom, 50);
 }
 
 async function quizAnswer(idx) {
@@ -375,18 +394,15 @@ async function quizAnswer(idx) {
   const ok = idx === q.answer;
   if (ok) { quizState.score += QUIZ_CONFIG.points[q.level]; quizState.correctCount++; }
 
-  // Блокируем кнопки визуально
-  document.querySelectorAll("#quiz-options button").forEach((btn, i) => {
-    btn.disabled = true;
-    if (i === idx) {
-      btn.classList.add(ok ? "bg-green-500/20 border-green-500/40" : "bg-red-500/20 border-red-500/40");
-    }
-    if (!ok && i === q.answer) {
-      btn.classList.add("bg-green-500/20 border-green-500/40");
-    }
+  // Подсвечиваем кнопки
+  const btns = document.querySelectorAll("#quiz-options button");
+  btns.forEach((btn, i) => {
+    btn.style.pointerEvents = "none";
+    if (i === idx) btn.classList.add(ok ? "bg-green-500/20" : "bg-red-500/20");
+    if (!ok && i === q.answer) btn.classList.add("bg-green-500/20");
   });
 
-  // Ответ пользователя
+  // Ответ пользователя в чат
   document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
     <div class="flex gap-3 flex-row-reverse">
       <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1">
@@ -397,12 +413,20 @@ async function quizAnswer(idx) {
       </div>
     </div>`);
 
-  setTimeout(scrollToBottom, 50);
+  scrollToBottom();
 
+  // Отправляем на сервер
   if (window.telegramUserId) {
-    submitAnswer({ user_id: window.telegramUserId, question_id: q.id, answer: q.options[idx], is_correct: ok, difficulty: q.level });
+    submitAnswer({
+      user_id: window.telegramUserId,
+      question_id: String(q.id),
+      answer: q.options[idx],
+      is_correct: ok,
+      difficulty: q.level,
+    });
   }
 
+  // Задержка перед объяснением
   setTimeout(() => {
     document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
       <div class="flex gap-3">
@@ -413,7 +437,7 @@ async function quizAnswer(idx) {
           <div class="flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-lg ${ok ? "text-green-400":"text-red-400"}" style="font-variation-settings:'FILL' 1">${ok ? "check_circle":"cancel"}</span>
             <span class="font-bold ${ok ? "text-green-400":"text-red-400"}">${ok ? "Правильно!":"Неверно"}</span>
-            ${!ok ? `<span class="text-xs text-on-surface-variant">Правильно: <span class="text-green-400 font-semibold">${q.options[q.answer]}</span></span>` : ""}
+            ${!ok ? `<span class="text-xs text-on-surface-variant ml-1">→ <span class="text-green-400">${q.options[q.answer]}</span></span>` : ""}
           </div>
           <p class="text-sm text-on-surface-variant leading-relaxed">${q.explanation}</p>
           ${ok ? `<p class="text-xs text-primary font-mono mt-2 font-bold">+${QUIZ_CONFIG.points[q.level]} XP</p>` : ""}
@@ -421,7 +445,7 @@ async function quizAnswer(idx) {
       </div>`);
 
     setEl("quiz-score", quizState.score + " XP");
-    setTimeout(scrollToBottom, 50);
+    scrollToBottom();
 
     setTimeout(() => {
       quizState.currentIndex++;
@@ -447,7 +471,7 @@ function addBotMessage(text) {
         <p class="text-sm leading-relaxed">${text}</p>
       </div>
     </div>`);
-  setTimeout(scrollToBottom, 50);
+  scrollToBottom();
 }
 
 function quizUpdateProgress() {
@@ -490,16 +514,25 @@ async function quizFinish() {
       </div>
     </div>`);
 
-  document.getElementById("quiz-options").innerHTML = `
-    <button class="w-full py-3.5 px-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl text-sm font-bold card-hover flex items-center justify-center gap-2" onclick="quizStart()">
-      <span class="material-symbols-outlined text-lg">refresh</span>Пройти ещё раз
-    </button>`;
+  const opts = document.getElementById("quiz-options");
+  opts.innerHTML = "";
+  const restartBtn = document.createElement("button");
+  restartBtn.type = "button";
+  restartBtn.style.cssText = "position:relative; z-index:10; pointer-events:auto;";
+  restartBtn.className = "w-full py-3.5 px-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-all";
+  restartBtn.addEventListener("click", quizStart);
+  restartBtn.innerHTML = `<span class="material-symbols-outlined text-lg">refresh</span>Пройти ещё раз`;
+  opts.appendChild(restartBtn);
 
-  setTimeout(scrollToBottom, 50);
+  scrollToBottom();
 
   if (window.telegramUserId) {
-    await finishGame({ user_id: window.telegramUserId, score: quizState.score, correct_count: quizState.correctCount, total_count: quizState.questions.length });
-    // Обновляем XP в хедере после завершения
+    await finishGame({
+      user_id: window.telegramUserId,
+      score: quizState.score,
+      correct_count: quizState.correctCount,
+      total_count: quizState.questions.length,
+    });
     loadUserStats(window.telegramUserId);
   }
 }
@@ -507,7 +540,9 @@ async function quizFinish() {
 function quizRestart() { quizStart(); }
 
 // ── Init ─────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-  // Небольшая задержка для корректной инициализации TG WebApp на мобильных
-  setTimeout(initTelegram, 100);
+document.addEventListener("DOMContentLoaded", async () => {
+  // Загружаем вопросы параллельно с инициализацией TG
+  await loadQuestions();
+  // Задержка для корректной инициализации TG WebApp на мобильных
+  setTimeout(initTelegram, 150);
 });
