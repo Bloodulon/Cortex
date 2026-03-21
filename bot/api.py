@@ -1,6 +1,6 @@
+import database as db
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import database as db
 
 app = FastAPI()
 
