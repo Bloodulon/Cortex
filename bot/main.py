@@ -16,40 +16,29 @@ logging.basicConfig(
 )
 
 
-async def main():
-    pool = await db.get_pool()
-    await db.init_db(pool)
-
+async def run_bot():
     bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage(), db_pool=pool)
+    dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(router)
+    await dp.start_polling(bot)
 
-    fastapi_app.state.db_pool = pool
 
-    # Запускаем бота в фоне
-    bot_task = asyncio.create_task(dp.start_polling(bot))
-
-    # Запускаем FastAPI
+async def run_api():
+    port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(
         app=fastapi_app,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         log_level="info",
     )
     server = uvicorn.Server(config)
+    await server.serve()
 
-    try:
-        await server.serve()
-    except Exception as e:
-        logging.error(f"Error: {e}")
-    finally:
-        bot_task.cancel()
-        await pool.close()
-        logging.info("Database pool closed.")
+
+async def main():
+    db.init_db()
+    await asyncio.gather(run_bot(), run_api())
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot stopped!")
+    asyncio.run(main())
