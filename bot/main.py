@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+import asyncpg
 import database as db
 import uvicorn
 from aiogram import Bot, Dispatcher
@@ -10,8 +11,7 @@ from config import BOT_TOKEN
 from handlers import router
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 
 
@@ -24,17 +24,16 @@ async def run_bot():
 
 async def run_api():
     config = uvicorn.Config(
-        app=fastapi_app,
-        host="0.0.0.0",
-        port=8000,
-        log_level="info",
+        app=fastapi_app, host="0.0.0.0", port=8000, log_level="info"
     )
     server = uvicorn.Server(config)
     await server.serve()
 
 
 async def main():
-    db.init_db()
+    pool = await asyncpg.create_pool(dsn=db.DATABASE_URL)
+    await db.init_db(pool)
+    fastapi_app.state.db_pool = pool
     await asyncio.gather(run_bot(), run_api())
 
 

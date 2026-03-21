@@ -5,17 +5,15 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Разрешаем запросы с Vercel, localhost и всех доменов для тестов
 app.add_middleware(
     CORSMiddleware,
-    allow_origins="*",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_origins=["https://tgbot-cortex.vercel.app"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
 
-# ── Pydantic модели для валидации ──────────────
 class AnswerSubmit(BaseModel):
     user_id: int
     question_id: str
@@ -31,13 +29,10 @@ class GameResult(BaseModel):
     total_count: int
 
 
-# ── Получить статистику пользователя ──────────
 @app.get("/stats/{user_id}")
 async def get_stats(user_id: int):
     pool = app.state.db_pool
     stats = await db.get_user(pool, user_id)
-    if not stats:
-        raise HTTPException(status_code=404, detail="User not found")
     accuracy = await db.get_accuracy(pool, user_id)
     return {
         "user_id": user_id,
@@ -49,11 +44,10 @@ async def get_stats(user_id: int):
     }
 
 
-# ── Лидерборд ─────────────────────────────────
 @app.get("/leaderboard")
-async def get_leaderboard(limit: int = 10):
+async def get_leaderboard():
     pool = app.state.db_pool
-    rows = await db.get_leaderboard(pool, limit)
+    rows = await db.get_leaderboard(pool, 10)
     return [
         {
             "position": i + 1,
@@ -65,26 +59,22 @@ async def get_leaderboard(limit: int = 10):
     ]
 
 
-# ── Отправить ответ на вопрос ─────────────────
 @app.post("/answer")
 async def submit_answer(data: AnswerSubmit):
     pool = app.state.db_pool
     points = {"easy": 10, "medium": 20, "hard": 40}.get(data.difficulty, 20)
-    await db.update_score(
-        pool, data.user_id, points if data.is_correct else 0, data.is_correct
-    )
-    return {"status": "ok", "points": points if data.is_correct else 0}
+    earned = points if data.is_correct else 0
+    await db.update_score(pool, data.user_id, earned, data.is_correct)
+    return {"status": "ok", "points": earned}
 
 
-# ── Завершить игру/раунд ──────────────────────
 @app.post("/game/finish")
 async def finish_game(data: GameResult):
     pool = app.state.db_pool
     await db.finish_game(pool, data.user_id)
-    return {"status": "ok", "score": data.score, "correct": data.correct_count}
+    return {"status": "ok", "score": data.score}
 
 
-# ── Healthcheck ───────────────────────────────
 @app.get("/health")
 def health():
     return {"status": "ok"}
