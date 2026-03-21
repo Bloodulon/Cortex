@@ -1,39 +1,23 @@
 import asyncio
 import logging
 import os
+
+import database as db
 import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-
+from api import app as fastapi_app
 from config import BOT_TOKEN
 from handlers import router
-from api import app as fastapi_app
-import database as db
-PORT = int(os.environ.get("PORT", 8000))
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-async def run_bot(dp: Dispatcher, bot: Bot):
-    """Запуск Telegram бота"""
-    logging.info("Starting Telegram Bot...")
-    await dp.start_polling(bot)
-
-async def run_api(app):
-    config = uvicorn.Config(
-        app=app,
-        host="0.0.0.0", 
-        port=PORT,
-        log_level="info",
-    )
-    server = uvicorn.Server(config)
-    await server.serve()
 
 async def main():
     pool = await db.get_pool()
-
     await db.init_db(pool)
 
     bot = Bot(token=BOT_TOKEN)
@@ -42,16 +26,27 @@ async def main():
 
     fastapi_app.state.db_pool = pool
 
+    # Запускаем бота в фоне
+    bot_task = asyncio.create_task(dp.start_polling(bot))
+
+    # Запускаем FastAPI
+    config = uvicorn.Config(
+        app=fastapi_app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+    )
+    server = uvicorn.Server(config)
+
     try:
-        await asyncio.gather(
-            run_bot(dp, bot),
-            run_api(fastapi_app)
-        )
+        await server.serve()
     except Exception as e:
-        logging.error(f"Error in main loop: {e}")
+        logging.error(f"Error: {e}")
     finally:
+        bot_task.cancel()
         await pool.close()
         logging.info("Database pool closed.")
+
 
 if __name__ == "__main__":
     try:
