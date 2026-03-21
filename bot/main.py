@@ -18,6 +18,7 @@ logging.basicConfig(
 async def run_bot():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
+    dp["db_pool"] = pool
     dp.include_router(router)
     await dp.start_polling(bot)
 
