@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 import asyncpg
 import database as db
@@ -27,11 +28,12 @@ async def main():
     dp["db_pool"] = pool
     dp.include_router(router)
 
-    # Настраиваем uvicorn
+    port = int(os.getenv("PORT", 8000))
+
     config = uvicorn.Config(
         app=fastapi_app,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         log_level="info",
     )
     server = uvicorn.Server(config)
