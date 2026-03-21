@@ -16,15 +16,18 @@ logging.basicConfig(
 )
 
 
-async def run_bot(pool):
+async def main():
+    pool = await asyncpg.create_pool(dsn=db.DATABASE_URL)
+    await db.init_db(pool)
+
+    fastapi_app.state.db_pool = pool
+
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     dp["db_pool"] = pool
     dp.include_router(router)
-    await dp.start_polling(bot)
 
-
-async def run_api():
+    # Настраиваем uvicorn
     config = uvicorn.Config(
         app=fastapi_app,
         host="0.0.0.0",
@@ -32,17 +35,10 @@ async def run_api():
         log_level="info",
     )
     server = uvicorn.Server(config)
-    await server.serve()
-
-
-async def main():
-    pool = await asyncpg.create_pool(dsn=db.DATABASE_URL)
-    await db.init_db(pool)
-    fastapi_app.state.db_pool = pool
 
     await asyncio.gather(
-        run_bot(pool),
-        run_api(),
+        dp.start_polling(bot),
+        server.serve(),
     )
 
 
