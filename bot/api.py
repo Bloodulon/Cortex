@@ -5,16 +5,10 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Разрешаем запросы с Vercel и localhost для разработки
+# Разрешаем запросы с Vercel, localhost и всех доменов для тестов
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://tgbot-cortex.vercel.app",
-        "https://tgbot-cortex.vercel.app/",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8000",
-    ],
+    allow_origins="*",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],

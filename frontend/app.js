@@ -5,14 +5,7 @@
 // ── Конфигурация API ────────────────────────
 const API_BASE_URL = "https://cortex-production-8ae8.up.railway.app";
 
-const PAGES = [
-  "practice",
-  "courses",
-  "dictionary",
-  "quiz",
-  "rating",
-  "profile",
-];
+const PAGES = ["practice", "courses", "dictionary", "rating", "profile"];
 
 // ── API функции ──────────────────────────────
 async function apiRequest(endpoint, options = {}) {
@@ -22,17 +15,23 @@ async function apiRequest(endpoint, options = {}) {
     ...options,
   };
 
+  console.log(`[API] ${options.method || "GET"} ${url}`);
+
   try {
     const response = await fetch(url, config);
+    console.log(`[API] Response status: ${response.status}`);
+
     if (!response.ok) {
       const error = await response
         .json()
         .catch(() => ({ detail: "Request failed" }));
       throw new Error(error.detail || `HTTP ${response.status}`);
     }
-    return await response.json();
+    const data = await response.json();
+    console.log(`[API] Response data:`, data);
+    return data;
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
+    console.error(`[API] Error (${endpoint}):`, error);
     throw error;
   }
 }

@@ -415,6 +415,37 @@
                     </button>
                 </section>
 
+                <!-- Quiz Button -->
+                <section>
+                    <button
+                        onclick="navigate('quiz')"
+                        class="w-full p-7 bg-gradient-to-br from-tertiary to-purple-600 rounded-xl flex flex-col items-center gap-3 card-hover relative overflow-hidden group glow-purple"
+                    >
+                        <div
+                            class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                        ></div>
+                        <div class="bg-on-primary/15 p-3 rounded-full">
+                            <span
+                                class="material-symbols-outlined text-4xl text-on-primary"
+                                style="
+                                    font-variation-settings: &quot;FILL&quot; 1;
+                                "
+                                >psychology</span
+                            >
+                        </div>
+                        <div class="text-center">
+                            <h3
+                                class="text-on-primary text-xl font-extrabold uppercase tracking-wide"
+                            >
+                                Викторина
+                            </h3>
+                            <p class="text-on-primary/70 text-sm">
+                                Проверь свои знания AI
+                            </p>
+                        </div>
+                    </button>
+                </section>
+
                 <!-- Bento stats -->
                 <section class="grid grid-cols-2 gap-3">
                     <div
@@ -1523,75 +1554,63 @@
      BOTTOM NAV
 ═══════════════════════════════════════════ -->
         <nav
-            class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-3 pb-6 bg-slate-900/90 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5"
+            class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-safe pt-3 pb-6 bg-slate-900/90 backdrop-blur-2xl rounded-t-[1.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/5"
         >
             <button
-                class="nav-item active flex flex-col items-center justify-center px-4 py-1.5 gap-0.5"
+                class="nav-item active flex flex-col items-center justify-center px-2 py-1.5 gap-0.5"
                 onclick="navigate('practice')"
             >
-                <span class="material-symbols-outlined text-[22px]">bolt</span>
+                <span class="material-symbols-outlined text-[20px]">bolt</span>
                 <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
+                    class="text-[8px] font-bold uppercase tracking-widest font-mono"
                     >Практика</span
                 >
             </button>
             <button
-                class="nav-item flex flex-col items-center justify-center px-4 py-1.5 gap-0.5 text-slate-500"
+                class="nav-item flex flex-col items-center justify-center px-2 py-1.5 gap-0.5 text-slate-500"
                 onclick="navigate('courses')"
             >
-                <span class="material-symbols-outlined text-[22px]"
+                <span class="material-symbols-outlined text-[20px]"
                     >school</span
                 >
                 <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
+                    class="text-[8px] font-bold uppercase tracking-widest font-mono"
                     >Курсы</span
                 >
             </button>
             <button
-                class="nav-item flex flex-col items-center justify-center px-4 py-1.5 gap-0.5 text-slate-500"
+                class="nav-item flex flex-col items-center justify-center px-2 py-1.5 gap-0.5 text-slate-500"
                 onclick="navigate('dictionary')"
             >
-                <span class="material-symbols-outlined text-[22px]"
+                <span class="material-symbols-outlined text-[20px]"
                     >menu_book</span
                 >
                 <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
+                    class="text-[8px] font-bold uppercase tracking-widest font-mono"
                     >Словарь</span
                 >
             </button>
             <button
-                class="nav-item flex flex-col items-center justify-center px-4 py-1.5 gap-0.5 text-slate-500"
-                onclick="navigate('quiz')"
-            >
-                <span class="material-symbols-outlined text-[22px]"
-                    >psychology</span
-                >
-                <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
-                    >Викторина</span
-                >
-            </button>
-            <button
-                class="nav-item flex flex-col items-center justify-center px-4 py-1.5 gap-0.5 text-slate-500"
+                class="nav-item flex flex-col items-center justify-center px-2 py-1.5 gap-0.5 text-slate-500"
                 onclick="navigate('rating')"
             >
-                <span class="material-symbols-outlined text-[22px]"
+                <span class="material-symbols-outlined text-[20px]"
                     >emoji_events</span
                 >
                 <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
+                    class="text-[8px] font-bold uppercase tracking-widest font-mono"
                     >Рейтинг</span
                 >
             </button>
             <button
-                class="nav-item flex flex-col items-center justify-center px-4 py-1.5 gap-0.5 text-slate-500"
+                class="nav-item flex flex-col items-center justify-center px-2 py-1.5 gap-0.5 text-slate-500"
                 onclick="navigate('profile')"
             >
-                <span class="material-symbols-outlined text-[22px]"
+                <span class="material-symbols-outlined text-[20px]"
                     >person</span
                 >
                 <span
-                    class="text-[9px] font-bold uppercase tracking-widest font-mono"
+                    class="text-[8px] font-bold uppercase tracking-widest font-mono"
                     >Профиль</span
                 >
             </button>
@@ -1603,7 +1622,6 @@
                 "practice",
                 "courses",
                 "dictionary",
-                "quiz",
                 "rating",
                 "profile",
             ];
