@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 
 import database as db
 import uvicorn
@@ -24,11 +23,10 @@ async def run_bot():
 
 
 async def run_api():
-    port = int(os.getenv("PORT", 8000))
     config = uvicorn.Config(
         app=fastapi_app,
         host="0.0.0.0",
-        port=port,
+        port=8000,
         log_level="info",
     )
     server = uvicorn.Server(config)
