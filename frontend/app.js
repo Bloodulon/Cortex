@@ -25,9 +25,58 @@ const getLeaderboard = ()     => apiRequest("/leaderboard");
 const submitAnswer   = (data) => apiRequest("/answer",      { method: "POST", body: JSON.stringify(data) });
 const finishGame     = (data) => apiRequest("/game/finish", { method: "POST", body: JSON.stringify(data) });
 
+// ── Утилиты ──────────────────────────────────
+function getRankLabel(score) {
+  if (score < 50)   return "🐣 Новичок";
+  if (score < 200)  return "🧑‍💻 Джуниор";
+  if (score < 500)  return "🚀 Мидл";
+  if (score < 1000) return "🧠 Сеньор";
+  return "🏆 AI Мастер";
+}
+
+function getLevel(score) {
+  return Math.max(1, Math.floor(score / 250) + 1);
+}
+
+function setEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// Аватар — фото или инициалы
+function setAvatar(wrapId, photoUrl, name) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (photoUrl) {
+    wrap.innerHTML = `<img src="${photoUrl}" class="w-full h-full object-cover rounded-full" onerror="this.parentNode.innerHTML='<span class=\\'avatar-initials\\'>${getInitials(name)}</span>'" />`;
+  } else {
+    wrap.innerHTML = `<span class="avatar-initials">${getInitials(name)}</span>`;
+  }
+}
+
+function getInitials(name) {
+  if (!name) return "?";
+  return name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+// ── Прокрутка вниз ───────────────────────────
+function scrollToBottom() {
+  // Скроллим и весь экран и контейнер сообщений
+  const el = document.getElementById("quiz-messages");
+  if (el) {
+    el.scrollTop = el.scrollHeight;
+  }
+  // Также скроллим основную страницу
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
 // ── Navigation ───────────────────────────────
 function navigate(page) {
-  quizClose(false);
+  // Если открыта викторина — закрываем без скролла
+  const qc = document.getElementById("quiz-content");
+  if (qc && !qc.classList.contains("hidden")) {
+    quizClose(false);
+  }
 
   PAGES.forEach(p => {
     document.getElementById("page-" + p).classList.remove("active");
@@ -52,13 +101,10 @@ function quizOpen() {
   document.getElementById("quiz-content").classList.remove("hidden");
 
   // Переключаем хедер
-  document.getElementById("header-default").classList.add("hidden");
-  document.getElementById("header-default").classList.remove("flex");
-  document.getElementById("header-quiz").classList.remove("hidden");
-  document.getElementById("header-quiz").classList.add("flex");
-
-  // Сбрасываем счёт в хедере
-  document.getElementById("quiz-score").textContent = "0 XP";
+  const hd = document.getElementById("header-default");
+  const hq = document.getElementById("header-quiz");
+  if (hd) { hd.classList.add("hidden"); hd.classList.remove("flex"); }
+  if (hq) { hq.classList.remove("hidden"); hq.classList.add("flex"); }
 
   window.scrollTo({ top: 0, behavior: "instant" });
 }
@@ -71,11 +117,11 @@ function quizClose(scroll = true) {
   qc.classList.add("hidden");
   pc.classList.remove("hidden");
 
-  // Возвращаем обычный хедер
-  document.getElementById("header-quiz").classList.add("hidden");
-  document.getElementById("header-quiz").classList.remove("flex");
-  document.getElementById("header-default").classList.remove("hidden");
-  document.getElementById("header-default").classList.add("flex");
+  // Возвращаем хедер
+  const hd = document.getElementById("header-default");
+  const hq = document.getElementById("header-quiz");
+  if (hq) { hq.classList.add("hidden"); hq.classList.remove("flex"); }
+  if (hd) { hd.classList.remove("hidden"); hd.classList.add("flex"); }
 
   if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
 }
@@ -89,63 +135,58 @@ function dictToggle(tab) {
 
 // ── Telegram init ────────────────────────────
 function initTelegram() {
-  if (!window.Telegram?.WebApp) return;
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
+  // Пробуем получить данные из Telegram WebApp
+  let user = null;
+  let photoUrl = null;
 
-  const user = tg.initDataUnsafe?.user;
-  if (!user) return;
-
-  window.telegramUserId = user.id;
-
-  // Имя везде где есть класс tg-username
-  const name = user.first_name + (user.last_name ? " " + user.last_name : "");
-  document.querySelectorAll(".tg-username").forEach(el => el.textContent = name);
-
-  // Аватарка в практике и профиле
-  if (user.photo_url) {
-    setAvatar("practice-avatar-wrap", "practice-avatar-icon", user.photo_url);
-    setAvatar("profile-avatar-wrap",  "profile-avatar-icon",  user.photo_url);
+  try {
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+      user = tg.initDataUnsafe?.user || null;
+    }
+  } catch (e) {
+    console.warn("Telegram init error:", e);
   }
 
-  // Позиция в рейтинге — имя
-  setEl("my-rank-pos", "#—");
+  if (user) {
+    window.telegramUserId = user.id;
+    photoUrl = user.photo_url || null;
 
-  loadUserStats(user.id);
-  loadProfileStats(user.id);
-}
+    const name = [user.first_name, user.last_name].filter(Boolean).join(" ");
 
-// ── Утилиты ──────────────────────────────────
-function getRankLabel(score) {
-  if (score < 50)   return "🐣 Новичок";
-  if (score < 200)  return "🧑‍💻 Джуниор";
-  if (score < 500)  return "🚀 Мидл";
-  if (score < 1000) return "🧠 Сеньор";
-  return "🏆 AI Мастер";
-}
+    // Имя везде
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = name || user.username || "—");
 
-function getLevel(score) {
-  return Math.floor(score / 250) + 1;
-}
+    // Аватарки
+    setAvatar("practice-avatar-wrap", photoUrl, name);
+    setAvatar("profile-avatar-wrap",  photoUrl, name);
 
-function setEl(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
+    // Загружаем данные
+    loadUserStats(user.id);
+    loadProfileStats(user.id);
 
-function setAvatar(wrapId, iconId, photoUrl) {
-  const wrap = document.getElementById(wrapId);
-  const icon = document.getElementById(iconId);
-  if (!wrap) return;
-  if (photoUrl) {
-    wrap.innerHTML = `<img src="${photoUrl}" class="w-full h-full object-cover rounded-full" />`;
-  } else if (icon) {
-    icon.style.display = "block";
+  } else {
+    // Нет данных Telegram — показываем заглушки и пробуем без userId
+    console.warn("Telegram user not available");
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = "Гость");
+    setAvatar("practice-avatar-wrap", null, "Гость");
+    setAvatar("profile-avatar-wrap",  null, "Гость");
+
+    // Показываем нулевые значения
+    setEl("header-xp", "0 XP");
+    setEl("practice-level-badge", "LVL 1");
+    setEl("practice-rank", "🐣 Новичок");
+    setEl("daily-label", "0");
+    setEl("practice-games", "0 игр");
+    setEl("practice-score", "0 XP");
+    setEl("practice-accuracy", "0%");
+    setEl("streak-label", "Серия: 0 игр");
   }
 }
 
-// ── Статистика хедер + practice ──────────────
+// ── Загрузка статистики ───────────────────────
 async function loadUserStats(userId) {
   const stats = await getUserStats(userId);
   if (!stats) return;
@@ -157,32 +198,31 @@ async function loadUserStats(userId) {
   // Хедер
   setEl("header-xp", score.toLocaleString() + " XP");
 
-  // Practice hero
+  // Practice
   setEl("practice-level-badge", "LVL " + level);
   setEl("practice-rank", rank);
   setEl("practice-games", stats.games_played + " игр");
-  setEl("practice-score", "+" + score.toLocaleString() + " XP");
+  setEl("practice-score", score.toLocaleString() + " XP");
   setEl("practice-accuracy", stats.accuracy + "%");
   setEl("streak-label", "Серия: " + stats.games_played + " игр");
 
-  // Accuracy bar
   const accBar = document.getElementById("practice-accuracy-bar");
-  if (accBar) accBar.style.width = stats.accuracy + "%";
+  if (accBar) accBar.style.width = Math.min(stats.accuracy, 100) + "%";
 
-  // Daily goal
+  // Дневная цель
   const done = stats.total_answers % 10;
   setEl("daily-label", done);
   const dp = document.getElementById("daily-progress");
   if (dp) dp.style.width = (done / 10 * 100) + "%";
 
-  // Dictionary streak
+  // Словарь
   setEl("dict-streak", stats.games_played + " игр");
 
-  // My position in rating
+  // Рейтинг — моя позиция
   setEl("my-rank-score", score.toLocaleString() + " XP");
 }
 
-// ── Профиль ──────────────────────────────────
+// ── Загрузка профиля ─────────────────────────
 async function loadProfileStats(userId) {
   const stats = await getUserStats(userId);
   if (!stats) return;
@@ -191,39 +231,52 @@ async function loadProfileStats(userId) {
   const level = getLevel(score);
   const rank  = getRankLabel(score);
   const pct   = Math.min(score / 2000 * 100, 100);
-  const dailyPct = stats.total_answers > 0 ? Math.round(stats.correct_answers / stats.total_answers * 100) : 0;
+  const dailyPct = stats.total_answers > 0
+    ? Math.round(stats.correct_answers / stats.total_answers * 100)
+    : 0;
 
-  setEl("profile-xp",        score.toLocaleString());
-  setEl("profile-games",     stats.games_played);
-  setEl("profile-accuracy",  stats.accuracy + "%");
-  setEl("profile-xp-label",  score + " / 2000 XP");
+  setEl("profile-xp",          score.toLocaleString());
+  setEl("profile-games",       stats.games_played);
+  setEl("profile-accuracy",    stats.accuracy + "%");
+  setEl("profile-xp-label",    score + " / 2000 XP");
   setEl("profile-level-badge", "LVL " + level);
   setEl("profile-rank-label",  rank);
   setEl("profile-daily-pct",   dailyPct + "%");
-  setEl("profile-balance",     score * 4 + " монет");
+  setEl("profile-balance",     (score * 4).toLocaleString() + " монет");
 
   const lvlBar = document.getElementById("profile-level-bar");
   if (lvlBar) lvlBar.style.width = pct + "%";
 }
 
-// ── Лидерборд ────────────────────────────────
+// ── Загрузка лидерборда ──────────────────────
 async function loadLeaderboard() {
-  const rows = await getLeaderboard();
-  if (!rows || !rows.length) return;
-
   const container = document.getElementById("leaderboard-list");
   if (!container) return;
+
+  container.innerHTML = `<div class="flex items-center justify-center py-8 text-on-surface-variant text-sm font-mono">Загрузка...</div>`;
+
+  const rows = await getLeaderboard();
+
+  if (!rows || !rows.length) {
+    container.innerHTML = `<div class="flex items-center justify-center py-8 text-on-surface-variant text-sm font-mono">Нет данных</div>`;
+    return;
+  }
+
+  // Найти позицию текущего пользователя
+  const myRow = rows.find(r => r.user_id === window.telegramUserId);
+  if (myRow) setEl("my-rank-pos", "#" + myRow.position);
 
   container.innerHTML = rows.map((r, i) => {
     const rankClass = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "text-on-surface-variant";
     const isMe = r.user_id === window.telegramUserId;
+    const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
     return `
-      <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 card-hover ${isMe ? "border border-primary/40" : ""}">
-        <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${r.position}</span>
-        <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0">
-          <span class="material-symbols-outlined text-on-surface-variant text-sm" style="font-variation-settings:'FILL' 1">person</span>
+      <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 card-hover ${isMe ? "border border-primary/40 bg-primary/5" : ""}">
+        <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${medal || r.position}</span>
+        <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 text-xs font-bold ${isMe ? "bg-primary/20 text-primary" : "text-on-surface-variant"}">
+          ${isMe ? "Вы" : (r.position <= 3 ? "★" : r.position)}
         </div>
-        <p class="flex-1 text-sm font-medium">${isMe ? "Вы" : "User_" + String(r.user_id).slice(-4)}</p>
+        <p class="flex-1 text-sm font-medium ${isMe ? "text-primary font-bold" : ""}">${isMe ? "Вы" : "User_" + String(r.user_id).slice(-4)}</p>
         <span class="${rankClass} text-sm font-mono font-bold">${r.score.toLocaleString()} XP</span>
       </div>`;
   }).join("");
@@ -234,17 +287,23 @@ async function loadLeaderboard() {
 // ══════════════════════════════════════════
 
 const QUIZ_CONFIG = { questionsPerRound: 5, points: { easy: 10, medium: 20, hard: 40 } };
-let quizState = { questions: [], currentIndex: 0, score: 0, correctCount: 0, locked: false };
+
+// Глобальный счёт викторины — не сбрасывается при повторном открытии
+let quizState = {
+  questions: [], currentIndex: 0,
+  score: 0, correctCount: 0,
+  locked: false, started: false
+};
 
 const QUIZ_QUESTIONS = [
-  { id:"q1", level:"easy",   question:"Что такое нейронная сеть?", options:["Сеть интернет-провайдеров","Математическая модель, вдохновлённая работой мозга","Протокол передачи данных","Антивирусная программа"], answer:1, explanation:"Нейронная сеть — набор алгоритмов, смоделированных по образцу мозга." },
-  { id:"q2", level:"easy",   question:"Что означает аббревиатура 'AI'?", options:["Automated Internet","Artificial Intelligence","Advanced Integration","Automatic Input"], answer:1, explanation:"AI = Artificial Intelligence — искусственный интеллект." },
-  { id:"q3", level:"medium", question:"Что такое 'переобучение' (overfitting)?", options:["Модель медленно обучается","Отлично на обучающих данных, плохо на новых","Использует много памяти","Обучалась слишком долго"], answer:1, explanation:"Overfitting — модель запомнила данные вместо паттернов." },
-  { id:"q4", level:"medium", question:"Какая функция активации популярна в скрытых слоях?", options:["Sigmoid","Tanh","ReLU","Softmax"], answer:2, explanation:"ReLU решает проблему затухающих градиентов." },
-  { id:"q5", level:"hard",   question:"Что такое 'hallucination' в LLM?", options:["Генерация плохих изображений","Модель уверенно выдаёт ложную информацию","Ошибка обучения","Дублирование токенов"], answer:1, explanation:"Галлюцинации — правдоподобная, но неверная информация." },
-  { id:"q6", level:"hard",   question:"Что такое RLHF?", options:["Reinforcement Learning from Human Feedback","Recursive Layer Hyperparameter Framework","Regularized Loss with Heuristic Functions","Real-time Learning High Fidelity"], answer:0, explanation:"RLHF — обучение с подкреплением на основе обратной связи людей." },
-  { id:"q7", level:"easy",   question:"Что такое машинное обучение (ML)?", options:["Обучение людей с машинами","Раздел AI, где системы учатся на данных","Производство роботов","Язык программирования"], answer:1, explanation:"ML — алгоритмы улучшаются через опыт." },
-  { id:"q8", level:"medium", question:"Что такое Transformer в AI?", options:["Электрический трансформатор","Архитектура нейросетей на основе внимания","Метод сжатия данных","Алгоритм сортировки"], answer:1, explanation:"Transformer — архитектура на self-attention, основа GPT и BERT." },
+  { id:"q1", level:"easy",   question:"Что такое нейронная сеть?",                          options:["Сеть интернет-провайдеров","Математическая модель, вдохновлённая работой мозга","Протокол передачи данных","Антивирусная программа"],       answer:1, explanation:"Нейронная сеть — набор алгоритмов, смоделированных по образцу мозга." },
+  { id:"q2", level:"easy",   question:"Что означает аббревиатура 'AI'?",                    options:["Automated Internet","Artificial Intelligence","Advanced Integration","Automatic Input"],                                                   answer:1, explanation:"AI = Artificial Intelligence — искусственный интеллект." },
+  { id:"q3", level:"medium", question:"Что такое 'переобучение' (overfitting)?",            options:["Модель медленно обучается","Отлично на обучающих данных, плохо на новых","Использует много памяти","Обучалась слишком долго"],              answer:1, explanation:"Overfitting — модель запомнила данные вместо паттернов." },
+  { id:"q4", level:"medium", question:"Какая функция активации популярна в скрытых слоях?", options:["Sigmoid","Tanh","ReLU","Softmax"],                                                                                                        answer:2, explanation:"ReLU решает проблему затухающих градиентов." },
+  { id:"q5", level:"hard",   question:"Что такое 'hallucination' в LLM?",                   options:["Генерация плохих изображений","Модель уверенно выдаёт ложную информацию","Ошибка обучения","Дублирование токенов"],                       answer:1, explanation:"Галлюцинации — правдоподобная, но неверная информация." },
+  { id:"q6", level:"hard",   question:"Что такое RLHF?",                                    options:["Reinforcement Learning from Human Feedback","Recursive Layer Hyperparameter Framework","Regularized Loss with Heuristic Functions","Real-time Learning High Fidelity"], answer:0, explanation:"RLHF — обучение с подкреплением на основе обратной связи людей." },
+  { id:"q7", level:"easy",   question:"Что такое машинное обучение (ML)?",                  options:["Обучение людей с машинами","Раздел AI, где системы учатся на данных","Производство роботов","Язык программирования"],                     answer:1, explanation:"ML — алгоритмы улучшаются через опыт." },
+  { id:"q8", level:"medium", question:"Что такое Transformer в AI?",                        options:["Электрический трансформатор","Архитектура нейросетей на основе внимания","Метод сжатия данных","Алгоритм сортировки"],                    answer:1, explanation:"Transformer — архитектура на self-attention, основа GPT и BERT." },
 ];
 
 function shuffleArray(arr) {
@@ -257,20 +316,30 @@ function shuffleArray(arr) {
 }
 
 function quizStart() {
-  quizState = { questions: shuffleArray(QUIZ_QUESTIONS).slice(0, QUIZ_CONFIG.questionsPerRound), currentIndex:0, score:0, correctCount:0, locked:false };
+  quizState = {
+    questions: shuffleArray(QUIZ_QUESTIONS).slice(0, QUIZ_CONFIG.questionsPerRound),
+    currentIndex: 0, score: 0, correctCount: 0, locked: false, started: true
+  };
+
   document.getElementById("quiz-messages").innerHTML = "";
-  document.getElementById("quiz-score").textContent = "0 XP";
+  setEl("quiz-score", "0 XP");
+  setEl("quiz-progress", `Вопрос 1/${QUIZ_CONFIG.questionsPerRound}`);
+
   addBotMessage(`Отлично! Начинаем. Вопрос 1 из ${QUIZ_CONFIG.questionsPerRound}:`);
   quizShowQuestion();
 }
 
 function quizShowQuestion() {
   const q = quizState.questions[quizState.currentIndex];
-  const lc = q.level === "easy" ? "text-green-400 bg-green-500/20" : q.level === "medium" ? "text-yellow-400 bg-yellow-500/20" : "text-red-400 bg-red-500/20";
+  const lc = q.level === "easy"
+    ? "text-green-400 bg-green-500/20"
+    : q.level === "medium"
+      ? "text-yellow-400 bg-yellow-500/20"
+      : "text-red-400 bg-red-500/20";
 
   document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
     <div class="flex gap-3">
-      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0 mt-1">
         <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1">psychology</span>
       </div>
       <div class="glass rounded-2xl rounded-tl-sm p-4 max-w-[90%] border border-white/5">
@@ -282,16 +351,20 @@ function quizShowQuestion() {
   const opts = document.getElementById("quiz-options");
   opts.innerHTML = "";
   opts.className = "glass rounded-xl p-3 border border-white/5 space-y-2";
+
   q.options.forEach((opt, i) => {
     const btn = document.createElement("button");
-    btn.className = "w-full py-3 px-4 bg-surface-container-highest hover:bg-primary/20 border border-white/5 rounded-xl text-sm font-semibold text-left card-hover flex items-center gap-3";
+    btn.className = "w-full py-3 px-4 bg-surface-container-highest hover:bg-primary/20 border border-white/5 rounded-xl text-sm font-semibold text-left card-hover flex items-center gap-3 transition-all";
     btn.onclick = () => quizAnswer(i);
-    btn.innerHTML = `<span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center shrink-0 text-xs font-bold font-mono">${String.fromCharCode(65+i)}</span><span>${opt}</span>`;
+    btn.innerHTML = `
+      <span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center shrink-0 text-xs font-bold font-mono">${String.fromCharCode(65+i)}</span>
+      <span>${opt}</span>`;
     opts.appendChild(btn);
   });
 
   quizUpdateProgress();
-  scrollToBottom();
+  // Скролл с небольшой задержкой чтобы DOM обновился
+  setTimeout(scrollToBottom, 50);
 }
 
 async function quizAnswer(idx) {
@@ -302,15 +375,29 @@ async function quizAnswer(idx) {
   const ok = idx === q.answer;
   if (ok) { quizState.score += QUIZ_CONFIG.points[q.level]; quizState.correctCount++; }
 
+  // Блокируем кнопки визуально
+  document.querySelectorAll("#quiz-options button").forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === idx) {
+      btn.classList.add(ok ? "bg-green-500/20 border-green-500/40" : "bg-red-500/20 border-red-500/40");
+    }
+    if (!ok && i === q.answer) {
+      btn.classList.add("bg-green-500/20 border-green-500/40");
+    }
+  });
+
+  // Ответ пользователя
   document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
     <div class="flex gap-3 flex-row-reverse">
-      <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+      <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1">
         <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1">person</span>
       </div>
       <div class="bg-primary text-on-primary rounded-2xl rounded-tr-sm p-3.5 max-w-[85%]">
         <p class="text-sm">${q.options[idx]}</p>
       </div>
     </div>`);
+
+  setTimeout(scrollToBottom, 50);
 
   if (window.telegramUserId) {
     submitAnswer({ user_id: window.telegramUserId, question_id: q.id, answer: q.options[idx], is_correct: ok, difficulty: q.level });
@@ -319,66 +406,73 @@ async function quizAnswer(idx) {
   setTimeout(() => {
     document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
       <div class="flex gap-3">
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0 mt-1">
           <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1">psychology</span>
         </div>
         <div class="glass rounded-2xl rounded-tl-sm p-4 max-w-[90%] border border-white/5">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-lg ${ok ? "text-green-400":"text-red-400"}" style="font-variation-settings:'FILL' 1">${ok ? "check_circle":"cancel"}</span>
             <span class="font-bold ${ok ? "text-green-400":"text-red-400"}">${ok ? "Правильно!":"Неверно"}</span>
+            ${!ok ? `<span class="text-xs text-on-surface-variant">Правильно: <span class="text-green-400 font-semibold">${q.options[q.answer]}</span></span>` : ""}
           </div>
           <p class="text-sm text-on-surface-variant leading-relaxed">${q.explanation}</p>
-          ${ok ? `<p class="text-xs text-primary font-mono mt-1">+${QUIZ_CONFIG.points[q.level]} XP</p>` : ""}
+          ${ok ? `<p class="text-xs text-primary font-mono mt-2 font-bold">+${QUIZ_CONFIG.points[q.level]} XP</p>` : ""}
         </div>
       </div>`);
 
-    document.getElementById("quiz-score").textContent = quizState.score + " XP";
+    setEl("quiz-score", quizState.score + " XP");
+    setTimeout(scrollToBottom, 50);
 
     setTimeout(() => {
       quizState.currentIndex++;
       quizState.locked = false;
+
       if (quizState.currentIndex < quizState.questions.length) {
         addBotMessage(`Вопрос ${quizState.currentIndex + 1} из ${QUIZ_CONFIG.questionsPerRound}:`);
         quizShowQuestion();
       } else {
         quizFinish();
       }
-    }, 1400);
-  }, 400);
-
-  scrollToBottom();
+    }, 1600);
+  }, 500);
 }
 
 function addBotMessage(text) {
   document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
     <div class="flex gap-3">
-      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0 mt-1">
         <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1">psychology</span>
       </div>
       <div class="glass rounded-2xl rounded-tl-sm p-3.5 max-w-[85%] border border-white/5">
         <p class="text-sm leading-relaxed">${text}</p>
       </div>
     </div>`);
+  setTimeout(scrollToBottom, 50);
 }
 
 function quizUpdateProgress() {
   const pct = (quizState.currentIndex / QUIZ_CONFIG.questionsPerRound) * 100;
-  document.getElementById("quiz-progress-bar").style.width = pct + "%";
-  document.getElementById("quiz-progress").textContent = `Вопрос ${quizState.currentIndex + 1}/${QUIZ_CONFIG.questionsPerRound}`;
+  const bar = document.getElementById("quiz-progress-bar");
+  if (bar) bar.style.width = pct + "%";
+  setEl("quiz-progress", `Вопрос ${quizState.currentIndex + 1}/${QUIZ_CONFIG.questionsPerRound}`);
 }
 
 async function quizFinish() {
-  document.getElementById("quiz-progress-bar").style.width = "100%";
-  document.getElementById("quiz-progress").textContent = "Завершено!";
+  const bar = document.getElementById("quiz-progress-bar");
+  if (bar) bar.style.width = "100%";
+  setEl("quiz-progress", "Завершено!");
 
   const pct = Math.round(quizState.correctCount / quizState.questions.length * 100);
+  const verdict = pct === 100 ? "🏆 Идеально!" : pct >= 80 ? "🎉 Отлично!" : pct >= 60 ? "👍 Неплохо!" : "📚 Продолжай учиться!";
+
   document.getElementById("quiz-messages").insertAdjacentHTML("beforeend", `
     <div class="flex gap-3">
-      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center shrink-0 mt-1">
         <span class="material-symbols-outlined text-yellow-400 text-sm" style="font-variation-settings:'FILL' 1">emoji_events</span>
       </div>
       <div class="glass rounded-2xl rounded-tl-sm p-4 max-w-[90%] border border-white/5">
-        <p class="font-bold mb-3">🎉 Викторина завершена!</p>
+        <p class="font-bold mb-1">${verdict}</p>
+        <p class="text-xs text-on-surface-variant mb-3">Викторина завершена</p>
         <div class="grid grid-cols-2 gap-2 mb-3">
           <div class="bg-surface-container-highest rounded-lg p-3 text-center">
             <p class="text-[9px] text-on-surface-variant uppercase font-mono">Правильно</p>
@@ -397,28 +491,23 @@ async function quizFinish() {
     </div>`);
 
   document.getElementById("quiz-options").innerHTML = `
-    <button class="w-full py-3.5 px-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl text-sm font-bold card-hover" onclick="quizStart()">
-      <span class="material-symbols-outlined text-lg align-middle mr-2">refresh</span>Пройти ещё раз
+    <button class="w-full py-3.5 px-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl text-sm font-bold card-hover flex items-center justify-center gap-2" onclick="quizStart()">
+      <span class="material-symbols-outlined text-lg">refresh</span>Пройти ещё раз
     </button>`;
+
+  setTimeout(scrollToBottom, 50);
 
   if (window.telegramUserId) {
     await finishGame({ user_id: window.telegramUserId, score: quizState.score, correct_count: quizState.correctCount, total_count: quizState.questions.length });
+    // Обновляем XP в хедере после завершения
     loadUserStats(window.telegramUserId);
   }
-
-  scrollToBottom();
 }
 
 function quizRestart() { quizStart(); }
 
-function scrollToBottom() {
-  setTimeout(() => {
-    const el = document.getElementById("quiz-messages");
-    if (el) el.scrollTop = el.scrollHeight;
-  }, 100);
-}
-
 // ── Init ─────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  initTelegram();
+  // Небольшая задержка для корректной инициализации TG WebApp на мобильных
+  setTimeout(initTelegram, 100);
 });
