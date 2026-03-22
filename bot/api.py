@@ -56,12 +56,13 @@ async def get_stats(user_id: int):
     stats = await db.get_user(pool, user_id)
     accuracy = await db.get_accuracy(pool, user_id)
     return {
-        "user_id": user_id,
-        "total_score": stats["total_score"],
-        "games_played": stats["games_played"],
-        "correct": stats["correct_answers"],
+        "user_id":       user_id,
+        "total_score":   stats["total_score"],
+        "games_played":  stats["games_played"],
+        "correct":       stats["correct_answers"],
         "total_answers": stats["total_answers"],
-        "accuracy": round(accuracy, 1),
+        "accuracy":      round(accuracy, 1),
+        "streak_days":   stats.get("streak_days", 0),
     }
 
 

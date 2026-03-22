@@ -14,13 +14,14 @@ async def init_db(pool):
                 total_score     INTEGER DEFAULT 0,
                 games_played    INTEGER DEFAULT 0,
                 correct_answers INTEGER DEFAULT 0,
-                total_answers   INTEGER DEFAULT 0
+                total_answers   INTEGER DEFAULT 0,
+                streak_days     INTEGER DEFAULT 0,
+                last_game_date  DATE DEFAULT NULL
             )
         """)
-
-        await conn.execute("""
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT DEFAULT 'Игрок'
-        """)
+        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT DEFAULT 'Игрок'")
+        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INTEGER DEFAULT 0")
+        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_game_date DATE DEFAULT NULL")
 
 
 async def get_user(pool, user_id: int) -> dict:
@@ -57,10 +58,31 @@ async def update_score(pool, user_id: int, points: int, correct: bool):
 async def finish_game(pool, user_id: int):
     await get_user(pool, user_id)
     async with pool.acquire() as conn:
-        await conn.execute(
-            "UPDATE users SET games_played = games_played + 1 WHERE user_id = $1",
-            user_id,
+        row = await conn.fetchrow(
+            "SELECT last_game_date, streak_days FROM users WHERE user_id = $1",
+            user_id
         )
+        from datetime import date
+        today = date.today()
+        last = row["last_game_date"]
+        streak = row["streak_days"] or 0
+
+        if last is None:
+            new_streak = 1
+        elif last == today:
+            new_streak = streak
+        elif (today - last).days == 1:
+            new_streak = streak + 1
+        else:
+            new_streak = 1
+
+        await conn.execute("""
+            UPDATE users SET
+                games_played   = games_played + 1,
+                streak_days    = $1,
+                last_game_date = $2
+            WHERE user_id = $3
+        """, new_streak, today, user_id)
 
 
 async def get_accuracy(pool, user_id: int) -> float:

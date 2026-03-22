@@ -258,6 +258,16 @@ function initTelegram() {
   }
 }
 
+// Форматирование дней для русского языка
+function formatDays(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return n + " дней";
+  if (mod10 === 1) return n + " день";
+  if (mod10 >= 2 && mod10 <= 4) return n + " дня";
+  return n + " дней";
+}
+
 // ── Загрузка статистики ───────────────────────
 async function loadUserStats(userId) {
   const stats = await getUserStats(userId);
@@ -273,7 +283,8 @@ async function loadUserStats(userId) {
   setEl("practice-games", stats.games_played + " игр");
   setEl("practice-score", score.toLocaleString() + " XP");
   setEl("practice-accuracy", stats.accuracy + "%");
-  setEl("streak-label", "Серия: " + stats.games_played + " игр");
+  setEl("streak-label", "Серия: " + formatDays(stats.streak_days || 0));
+  setEl("dict-streak",  formatDays(stats.streak_days || 0));
 
   const accBar = document.getElementById("practice-accuracy-bar");
   if (accBar) accBar.style.width = Math.min(stats.accuracy, 100) + "%";
