@@ -10,11 +10,16 @@ async def init_db(pool):
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id         BIGINT PRIMARY KEY,
+                username        TEXT DEFAULT 'Игрок',
                 total_score     INTEGER DEFAULT 0,
                 games_played    INTEGER DEFAULT 0,
                 correct_answers INTEGER DEFAULT 0,
                 total_answers   INTEGER DEFAULT 0
             )
+        """)
+
+        await conn.execute("""
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT DEFAULT 'Игрок'
         """)
 
 

@@ -16,7 +16,6 @@ async function loadQuestions() {
     console.log(`[Quiz] Загружено ${QUIZ_QUESTIONS.length} вопросов`);
   } catch (e) {
     console.error("[Quiz] Ошибка загрузки questions.json:", e);
-    // Fallback — минимальный набор
     QUIZ_QUESTIONS = [
       {
         id: "q1",
@@ -216,7 +215,6 @@ function initTelegram() {
       const tg = window.Telegram.WebApp;
       tg.ready();
       tg.expand();
-      // Пробуем оба способа получить данные
       user = tg.initDataUnsafe?.user || null;
     }
   } catch (e) {
@@ -230,6 +228,10 @@ function initTelegram() {
       user.username ||
       "Пользователь";
     const photoUrl = user.photo_url || null;
+    apiRequest("/register", {
+      method: "POST",
+      body: JSON.stringify({ user_id: user.id, username: name }),
+    });
 
     document
       .querySelectorAll(".tg-username")
@@ -240,8 +242,6 @@ function initTelegram() {
     loadUserStats(user.id);
     loadProfileStats(user.id);
   } else {
-    // Данные TG недоступны — показываем заглушки
-    // Это нормально при открытии в браузере (не через бота)
     console.warn("Telegram user unavailable — running in browser mode");
 
     document
@@ -344,6 +344,7 @@ async function loadLeaderboard() {
   if (myRow) setEl("my-rank-pos", "#" + myRow.position);
 
   const medal = ["🥇", "🥈", "🥉"];
+
   container.innerHTML = rows
     .map((r, i) => {
       const rankClass =
@@ -355,14 +356,17 @@ async function loadLeaderboard() {
               ? "rank-3"
               : "text-on-surface-variant";
       const isMe = r.user_id === window.telegramUserId;
+      const displayName = r.username || (isMe ? "Вы" : "Игрок");
+      const initial = displayName[0].toUpperCase();
+
       return `
       <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 ${isMe ? "border border-primary/40 bg-primary/5" : ""}">
         <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${medal[i] || r.position}</span>
         <div class="w-8 h-8 rounded-full ${isMe ? "bg-primary/20" : "bg-surface-container"} flex items-center justify-center shrink-0 text-xs font-bold ${isMe ? "text-primary" : "text-on-surface-variant"}">
-          ${isMe ? "Вы" : "?"}
+          ${initial}
         </div>
         <p class="flex-1 text-sm font-medium ${isMe ? "text-primary font-bold" : ""}">
-          ${isMe ? "Вы" : "User_" + String(r.user_id).slice(-4)}
+          ${isMe ? "Вы · " + displayName : displayName}
         </p>
         <span class="${rankClass} text-sm font-mono font-bold">${r.score.toLocaleString()} XP</span>
       </div>`;
@@ -453,7 +457,6 @@ function quizShowQuestion() {
     </div>`,
   );
 
-  // Варианты ответов — рендерим ПОСЛЕ сообщения
   renderOptions(q);
   quizUpdateProgress();
   scrollToBottom();
@@ -498,7 +501,6 @@ async function quizAnswer(idx) {
     quizState.correctCount++;
   }
 
-  // Подсвечиваем кнопки
   const btns = document.querySelectorAll("#quiz-options button");
   btns.forEach((btn, i) => {
     btn.style.pointerEvents = "none";
@@ -522,7 +524,6 @@ async function quizAnswer(idx) {
 
   scrollToBottom();
 
-  // Отправляем на сервер
   if (window.telegramUserId) {
     submitAnswer({
       user_id: window.telegramUserId,
@@ -533,7 +534,6 @@ async function quizAnswer(idx) {
     });
   }
 
-  // Задержка перед объяснением
   setTimeout(() => {
     document.getElementById("quiz-messages").insertAdjacentHTML(
       "beforeend",
@@ -677,8 +677,6 @@ function quizRestart() {
 
 // ── Init ─────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
-  // Загружаем вопросы параллельно с инициализацией TG
   await loadQuestions();
-  // Задержка для корректной инициализации TG WebApp на мобильных
   setTimeout(initTelegram, 150);
 });

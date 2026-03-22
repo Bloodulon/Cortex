@@ -14,6 +14,11 @@ app.add_middleware(
 )
 
 
+class UserRegister(BaseModel):
+    user_id: int
+    username: str
+
+
 class AnswerSubmit(BaseModel):
     user_id: int
     question_id: str
@@ -27,6 +32,22 @@ class GameResult(BaseModel):
     score: int
     correct_count: int
     total_count: int
+
+
+@app.post("/register")
+async def register_user(data: UserRegister):
+    pool = app.state.db_pool
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO users (user_id, username)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE SET username = $2
+        """,
+            data.user_id,
+            data.username,
+        )
+    return {"status": "ok"}
 
 
 @app.get("/stats/{user_id}")
@@ -47,11 +68,16 @@ async def get_stats(user_id: int):
 @app.get("/leaderboard")
 async def get_leaderboard():
     pool = app.state.db_pool
-    rows = await db.get_leaderboard(pool, 10)
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT user_id, username, total_score, games_played
+            FROM users ORDER BY total_score DESC LIMIT 10
+        """)
     return [
         {
             "position": i + 1,
             "user_id": r["user_id"],
+            "username": r["username"],
             "score": r["total_score"],
             "games": r["games_played"],
         }
