@@ -121,26 +121,22 @@ function setAvatar(wrapId, photoUrl, name) {
   }
 }
 
-// ── Скролл к последнему сообщению ───────────
+// ── Скролл ───────────────────────────────────
 function scrollToBottom() {
   setTimeout(() => {
     const opts = document.getElementById("quiz-options");
-    if (opts) {
-      opts.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (opts) opts.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, 150);
 }
 
 // ── Navigation ───────────────────────────────
 function navigate(page) {
   const qc = document.getElementById("quiz-content");
-  if (qc && !qc.classList.contains("hidden")) {
-    quizClose(false);
-  }
+  if (qc && !qc.classList.contains("hidden")) quizClose(false);
 
-  PAGES.forEach((p) => {
-    document.getElementById("page-" + p).classList.remove("active");
-  });
+  PAGES.forEach((p) =>
+    document.getElementById("page-" + p).classList.remove("active"),
+  );
   document.getElementById("page-" + page).classList.add("active");
 
   document.querySelectorAll(".nav-item").forEach((btn, i) => {
@@ -156,11 +152,10 @@ function navigate(page) {
     loadProfileStats(window.telegramUserId);
 }
 
-// ── Quiz ─────────────────────────────────────
+// ── Quiz open/close ───────────────────────────
 function quizOpen() {
   document.getElementById("practice-content").classList.add("hidden");
   document.getElementById("quiz-content").classList.remove("hidden");
-
   const hd = document.getElementById("header-default");
   const hq = document.getElementById("header-quiz");
   if (hd) {
@@ -171,7 +166,6 @@ function quizOpen() {
     hq.classList.remove("hidden");
     hq.classList.add("flex");
   }
-
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
@@ -179,10 +173,8 @@ function quizClose(scroll = true) {
   const qc = document.getElementById("quiz-content");
   const pc = document.getElementById("practice-content");
   if (!qc || !pc) return;
-
   qc.classList.add("hidden");
   pc.classList.remove("hidden");
-
   const hd = document.getElementById("header-default");
   const hq = document.getElementById("header-quiz");
   if (hq) {
@@ -193,7 +185,6 @@ function quizClose(scroll = true) {
     hd.classList.remove("hidden");
     hd.classList.add("flex");
   }
-
   if (scroll) window.scrollTo({ top: 0, behavior: "instant" });
 }
 
@@ -209,7 +200,6 @@ function dictToggle(tab) {
 // ── Telegram init ────────────────────────────
 function initTelegram() {
   let user = null;
-
   try {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -228,6 +218,7 @@ function initTelegram() {
       user.username ||
       "Пользователь";
     const photoUrl = user.photo_url || null;
+
     apiRequest("/register", {
       method: "POST",
       body: JSON.stringify({ user_id: user.id, username: name }),
@@ -243,13 +234,11 @@ function initTelegram() {
     loadProfileStats(user.id);
   } else {
     console.warn("Telegram user unavailable — running in browser mode");
-
     document
       .querySelectorAll(".tg-username")
       .forEach((el) => (el.textContent = "Пользователь"));
     setAvatar("practice-avatar-wrap", null, "П");
     setAvatar("profile-avatar-wrap", null, "П");
-
     setEl("header-xp", "0 XP");
     setEl("practice-level-badge", "LVL 1");
     setEl("practice-rank", "🐣 Новичок");
@@ -258,7 +247,6 @@ function initTelegram() {
     setEl("practice-score", "0 XP");
     setEl("practice-accuracy", "0%");
     setEl("streak-label", "Начни игру!");
-
     setEl("profile-xp", "0");
     setEl("profile-games", "0");
     setEl("profile-accuracy", "0%");
@@ -312,6 +300,7 @@ async function loadProfileStats(userId) {
     stats.total_answers > 0
       ? Math.round((stats.correct_answers / stats.total_answers) * 100)
       : 0;
+  const coins = Math.floor(score / 10);
 
   setEl("profile-xp", score.toLocaleString());
   setEl("profile-games", stats.games_played);
@@ -320,7 +309,7 @@ async function loadProfileStats(userId) {
   setEl("profile-level-badge", "LVL " + level);
   setEl("profile-rank-label", rank);
   setEl("profile-daily-pct", dailyPct + "%");
-  setEl("profile-balance", (score * 4).toLocaleString() + " монет");
+  setEl("profile-balance", coins.toLocaleString() + " монет");
 
   const lvlBar = document.getElementById("profile-level-bar");
   if (lvlBar) lvlBar.style.width = pct + "%";
@@ -357,13 +346,12 @@ async function loadLeaderboard() {
               : "text-on-surface-variant";
       const isMe = r.user_id === window.telegramUserId;
       const displayName = r.username || (isMe ? "Вы" : "Игрок");
-      const initial = displayName[0].toUpperCase();
 
       return `
       <div class="bg-surface-container-low rounded-xl p-3.5 flex items-center gap-3 ${isMe ? "border border-primary/40 bg-primary/5" : ""}">
         <span class="font-mono w-7 text-center text-sm font-bold ${rankClass}">${medal[i] || r.position}</span>
-        <div class="w-8 h-8 rounded-full ${isMe ? "bg-primary/20" : "bg-surface-container"} flex items-center justify-center shrink-0 text-xs font-bold ${isMe ? "text-primary" : "text-on-surface-variant"}">
-          ${initial}
+        <div class="w-8 h-8 rounded-full ${isMe ? "bg-primary/20" : "bg-surface-container"} flex items-center justify-center shrink-0 text-[10px] font-bold font-mono ${isMe ? "text-primary" : "text-on-surface-variant"}">
+          #${r.position}
         </div>
         <p class="flex-1 text-sm font-medium ${isMe ? "text-primary font-bold" : ""}">
           ${isMe ? "Вы · " + displayName : displayName}
@@ -508,7 +496,6 @@ async function quizAnswer(idx) {
     if (!ok && i === q.answer) btn.classList.add("bg-green-500/20");
   });
 
-  // Ответ пользователя в чат
   document.getElementById("quiz-messages").insertAdjacentHTML(
     "beforeend",
     `
@@ -560,7 +547,6 @@ async function quizAnswer(idx) {
     setTimeout(() => {
       quizState.currentIndex++;
       quizState.locked = false;
-
       if (quizState.currentIndex < quizState.questions.length) {
         addBotMessage(
           `Вопрос ${quizState.currentIndex + 1} из ${QUIZ_CONFIG.questionsPerRound}:`,
