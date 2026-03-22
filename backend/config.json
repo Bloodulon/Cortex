@@ -1,0 +1,35 @@
+{
+  "ranks": [
+    { "label": "🐣 Новичок",     "min_xp": 0,    "max_xp": 49   },
+    { "label": "🧑‍💻 Джуниор",   "min_xp": 50,   "max_xp": 199  },
+    { "label": "🚀 Мидл",        "min_xp": 200,  "max_xp": 499  },
+    { "label": "🧠 Сеньор",      "min_xp": 500,  "max_xp": 999  },
+    { "label": "🏆 AI Мастер",   "min_xp": 1000, "max_xp": 99999 }
+  ],
+
+  "levels": {
+    "xp_per_level": 250,
+    "max_level": 20
+  },
+
+  "coins": {
+    "xp_to_coin_ratio": 10
+  },
+
+  "quiz": {
+    "questions_per_round": 5,
+    "points": {
+      "easy":   10,
+      "medium": 20,
+      "hard":   40
+    }
+  },
+
+  "daily_goal": {
+    "target_answers": 10
+  },
+
+  "streak": {
+    "reset_after_days": 1
+  }
+}

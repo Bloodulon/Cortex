@@ -22,18 +22,20 @@ Telegram Mini App для обучения искусственному инте�
  
 ```
 Cortex/
-├── bot/                    # Python бэкенд
+├── backend/                    # Python бэкенд
 │   ├── main.py             # Точка входа, запуск бота + API
 │   ├── handlers.py         # Хэндлеры aiogram
 │   ├── api.py              # FastAPI REST эндпоинты
 │   ├── database.py         # Работа с PostgreSQL через asyncpg
 │   ├── config.py           # Конфигурация
+│   ├── config.json
 │   ├── questions.json      # Банк вопросов викторины
 │   └── Dockerfile
-├── frontend/               # Статичный Mini App
+├── app/               # Статичный Mini App
 │   ├── index.html          # SPA с 5 страницами
 │   ├── app.js              # Логика навигации, викторина, API
 │   ├── style.css           # Стили
+│   ├── config.json
 │   └── questions.json      # Вопросы для фронта
 ├── docker-compose.yml      # Локальная разработка
 └── .env.example
