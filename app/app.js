@@ -1,4 +1,4 @@
-API_BASE_URL = os.getenv("API_BASE_URL")
+const API_BASE_URL = "https://cortex-production-8ae8.up.railway.app";
 const PAGES = ["practice", "courses", "dictionary", "rating", "profile"];
 
 // Данные из JSON
