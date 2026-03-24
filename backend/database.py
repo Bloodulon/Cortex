@@ -4,7 +4,6 @@ import asyncpg
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-
 async def init_db(pool):
     async with pool.acquire() as conn:
         await conn.execute("""
@@ -19,10 +18,18 @@ async def init_db(pool):
                 last_game_date  DATE DEFAULT NULL
             )
         """)
-        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT DEFAULT 'Игрок'")
-        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INTEGER DEFAULT 0")
-        await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_game_date DATE DEFAULT NULL")
 
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_cards (
+                user_id          BIGINT REFERENCES users(user_id),
+                deck_id          TEXT,
+                card_id          INTEGER,
+                repetition_count INTEGER DEFAULT 0,
+                is_learned       BOOLEAN DEFAULT FALSE,
+                last_repeat      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, deck_id, card_id)
+            )
+        """)
 
 async def get_user(pool, user_id: int) -> dict:
     async with pool.acquire() as conn:
@@ -102,3 +109,17 @@ async def get_leaderboard(pool, limit: int = 10) -> list:
             limit,
         )
         return [dict(r) for r in rows]
+
+async def record_card_attempt(pool, user_id: int, deck_id: str, card_id: int, success: bool):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO user_cards (user_id, deck_id, card_id, repetition_count, is_learned)
+            VALUES ($1, $2, $3, 1, $4)
+            ON CONFLICT (user_id, deck_id, card_id) DO UPDATE SET
+                repetition_count = user_cards.repetition_count + 1,
+                is_learned = (CASE WHEN $4 = TRUE THEN TRUE ELSE user_cards.is_learned END),
+                last_repeat = CURRENT_TIMESTAMP
+        """, user_id, deck_id, card_id, success)
+
+    xp = 5 if success else 1
+    await update_score(pool, user_id, xp, success)

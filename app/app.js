@@ -1,8 +1,4 @@
-// ══════════════════════════════════════════
-//  Cortex — app.js
-// ══════════════════════════════════════════
-
-const API_BASE_URL = "https://cortex-production-8ae8.up.railway.app";
+API_BASE_URL = os.getenv("API_BASE_URL")
 const PAGES = ["practice", "courses", "dictionary", "rating", "profile"];
 
 // Данные из JSON
@@ -25,9 +21,9 @@ let CONFIG = {
 async function loadData() {
   try {
     const [qRes, cRes, fRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/backend/questions.json`),
-      fetch(`${API_BASE_URL}/backend/config.json`),
-      fetch(`${API_BASE_URL}/backend/cards.json`)
+      fetch(`${API_BASE_URL}/api/questions`),
+      fetch(`${API_BASE_URL}/api/config`),
+      fetch(`${API_BASE_URL}/api/cards`)
     ]);
 
     if (!qRes.ok || !cRes.ok || !fRes.ok) {
