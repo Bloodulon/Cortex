@@ -25,16 +25,22 @@ let CONFIG = {
 async function loadData() {
   try {
     const [qRes, cRes, fRes] = await Promise.all([
-      fetch("./questions.json"),
-      fetch("./config.json"),
-      fetch("./backend/cards.json"),
+      fetch(`${API_BASE_URL}/backend/questions.json`),
+      fetch(`${API_BASE_URL}/backend/config.json`),
+      fetch(`${API_BASE_URL}/backend/cards.json`)
     ]);
+
+    if (!qRes.ok || !cRes.ok || !fRes.ok) {
+        throw new Error("Один из API-эндпоинтов недоступен");
+    }
+
     QUIZ_QUESTIONS = await qRes.json();
     CONFIG = await cRes.json();
-    FLASHCARDS_DATA = await fRes.json(); // Сохраняем карточки
-    console.log(`[Data] Загружено ${QUIZ_QUESTIONS.length} вопросов и карточки`);
+    FLASHCARDS_DATA = await fRes.json();
+
+    console.log(`[Data] Успешно загружено: ${QUIZ_QUESTIONS.length} вопросов`);
   } catch (e) {
-    console.warn("[Data] Ошибка загрузки:", e.message);
+    console.warn("[Data] Ошибка загрузки через API, используем встроенный конфиг:", e.message);
   }
 }
 
