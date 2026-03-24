@@ -24,15 +24,17 @@ let CONFIG = {
 // ── Загрузка JSON ─────────────────────────
 async function loadData() {
   try {
-    const [qRes, cRes] = await Promise.all([
+    const [qRes, cRes, fRes] = await Promise.all([
       fetch("./questions.json"),
-      fetch("./config.json")
+      fetch("./config.json"),
+      fetch("./backend/cards.json"),
     ]);
     QUIZ_QUESTIONS = await qRes.json();
     CONFIG = await cRes.json();
-    console.log(`[Data] Загружено ${QUIZ_QUESTIONS.length} вопросов`);
+    FLASHCARDS_DATA = await fRes.json(); // Сохраняем карточки
+    console.log(`[Data] Загружено ${QUIZ_QUESTIONS.length} вопросов и карточки`);
   } catch (e) {
-    console.warn("[Data] Не удалось загрузить JSON, используем fallback:", e.message);
+    console.warn("[Data] Ошибка загрузки:", e.message);
   }
 }
 
@@ -215,6 +217,11 @@ async function loadUserStats(userId) {
   const stats = await getUserStats(userId);
   if (!stats) return;
 
+  const accuracy = stats.accuracy || 0;
+  setEl("dict-mastery-text", accuracy + "%");
+  const masteryBar = document.getElementById("dict-mastery-bar");
+  if (masteryBar) masteryBar.style.width = accuracy + "%";
+
   const score = stats.total_score;
   const level = getLevel(score);
   const rank  = getRankLabel(score);
@@ -303,9 +310,7 @@ async function loadLeaderboard() {
   }).join("");
 }
 
-// ══════════════════════════════════════════
-//  QUIZ
-// ══════════════════════════════════════════
+// ── Викторина ────────────────────────────────
 
 let quizState = { questions: [], currentIndex: 0, score: 0, correctCount: 0, locked: false };
 
@@ -535,6 +540,136 @@ async function quizFinish() {
     await finishGame({ user_id: window.telegramUserId, score: quizState.score, correct_count: quizState.correctCount, total_count: quizState.questions.length });
     loadUserStats(window.telegramUserId);
   }
+}
+
+function startFlashcards(deckKey) {
+  const deck = FLASHCARDS_DATA[deckKey];
+  if (!deck) return;
+
+  flashcardState = {
+    deck: shuffleArray(deck),
+    currentIndex: 0,
+    correctCount: 0,
+    isFlipped: false
+  };
+
+  navigate('flashcards');
+  renderFlashcard();
+}
+
+function renderFlashcard() {
+  const card = flashcardState.deck[flashcardState.currentIndex];
+  const container = document.getElementById('flashcard-container');
+
+  setEl('flashcard-term', card.term);
+  setEl('flashcard-definition', card.definition);
+  setEl('flashcard-counter', `${flashcardState.currentIndex + 1} / ${flashcardState.deck.length}`);
+
+  container.classList.remove('is-flipped');
+  flashcardState.isFlipped = false;
+}
+
+function flipCard() {
+  const container = document.getElementById('flashcard-container');
+  container.classList.toggle('is-flipped');
+  flashcardState.isFlipped = !flashcardState.isFlipped;
+}
+
+async function nextFlashcard(known) {
+  if (known) flashcardState.correctCount++;
+
+  if (window.telegramUserId) {
+    await apiRequest("/answer", {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: window.telegramUserId,
+        is_correct: known,
+        difficulty: "easy"
+      })
+    });
+  }
+
+  flashcardState.currentIndex++;
+
+  if (flashcardState.currentIndex < flashcardState.deck.length) {
+    renderFlashcard();
+  } else {
+    finishFlashcards();
+  }
+}
+
+function startFlashcards(deckKey) {
+  const deck = FLASHCARDS_DATA[deckKey];
+  if (!deck) return;
+
+  flashcardState = {
+    deck: shuffleArray(deck),
+    currentIndex: 0,
+    correctCount: 0,
+    isFlipped: false
+  };
+
+  navigate('flashcards');
+  renderFlashcard();
+}
+
+function renderFlashcard() {
+  const card = flashcardState.deck[flashcardState.currentIndex];
+  const container = document.getElementById('flashcard-container');
+
+  setEl('flashcard-term', card.term);
+  setEl('flashcard-definition', card.definition);
+  setEl('flashcard-counter', `${flashcardState.currentIndex + 1} / ${flashcardState.deck.length}`);
+
+  container.classList.remove('is-flipped');
+  flashcardState.isFlipped = false;
+}
+
+function flipCard() {
+  const container = document.getElementById('flashcard-container');
+  container.classList.toggle('is-flipped');
+  flashcardState.isFlipped = !flashcardState.isFlipped;
+}
+
+async function nextFlashcard(known) {
+  if (known) flashcardState.correctCount++;
+
+  if (window.telegramUserId) {
+    await apiRequest("/answer", {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: window.telegramUserId,
+        is_correct: known,
+        difficulty: "easy"
+      })
+    });
+  }
+
+  flashcardState.currentIndex++;
+
+  if (flashcardState.currentIndex < flashcardState.deck.length) {
+    renderFlashcard();
+  } else {
+    finishFlashcards();
+  }
+}
+
+async function finishFlashcards() {
+  const total = flashcardState.deck.length;
+  const xpEarned = flashcardState.correctCount * 5;
+
+  if (window.telegramUserId) {
+    await finishGame({
+      user_id: window.telegramUserId,
+      score: xpEarned,
+      correct_count: flashcardState.correctCount,
+      total_count: total
+    });
+    loadUserStats(window.telegramUserId);
+  }
+
+  alert(`Повторение завершено! +${xpEarned} XP`);
+  navigate('dictionary');
 }
 
 function quizRestart() { quizStart(); }

@@ -328,22 +328,23 @@
     </div>
   </section>
   <div class="px-5 space-y-5 pb-6">
-    <div class="grid grid-cols-2 gap-3">
-      <button class="flex flex-col items-start p-4 rounded-xl bg-gradient-to-br from-primary to-primary-dim card-hover text-left glow-blue">
-        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-3">
-          <span class="material-symbols-outlined text-white text-lg" style="font-variation-settings:'FILL' 1">auto_awesome</span>
-        </div>
-        <span class="text-on-primary font-bold leading-tight">Повтор с ИИ</span>
-        <span class="text-on-primary/70 text-[9px] uppercase tracking-widest mt-1 font-mono">УМНАЯ АДАПТАЦИЯ</span>
-      </button>
-      <button class="flex flex-col items-start p-4 rounded-xl bg-surface-container-highest card-hover text-left border border-white/5">
-        <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-          <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1">style</span>
-        </div>
-        <span class="text-on-surface font-bold leading-tight">Повтор</span>
-        <span class="text-on-surface-variant text-[9px] uppercase tracking-widest mt-1 font-mono">КАРТОЧКИ</span>
-      </button>
-    </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="startFlashcards('all')" class="flex flex-col items-start p-4 rounded-xl bg-gradient-to-br from-primary to-primary-dim card-hover text-left glow-blue">
+          <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-white text-lg" style="font-variation-settings:'FILL' 1">auto_awesome</span>
+          </div>
+          <span class="text-on-primary font-bold leading-tight">Повтор с ИИ</span>
+          <span class="text-on-primary/70 text-[9px] uppercase tracking-widest mt-1 font-mono">УМНАЯ АДАПТАЦИЯ</span>
+        </button>
+
+        <button onclick="startFlashcards('ml_basics')" class="flex flex-col items-start p-4 rounded-xl bg-surface-container-highest card-hover text-left border border-white/5">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+            <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1">style</span>
+          </div>
+          <span class="text-on-surface font-bold leading-tight">Повтор</span>
+          <span class="text-on-surface-variant text-[9px] uppercase tracking-widest mt-1 font-mono">КАРТОЧКИ</span>
+        </button>
+      </div>
     <div>
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-bold">Активные словари</h2>
