@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import database as db
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +16,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ────────── Загрузка JSON-файлов ──────────
+BASE_DIR = Path(__file__).parent
+
+
+def _load_json(filename: str):
+    path = BASE_DIR / filename
+    if not path.exists():
+        raise FileNotFoundError(f"Файл не найден: {path}")
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+_questions_cache = _load_json("questions.json")
+
+_config_cache = {
+    "ranks": [
+        {"label": "🐣 Новичок", "min_xp": 0},
+        {"label": "🧑‍💻 Джуниор", "min_xp": 50},
+        {"label": "🚀 Мидл", "min_xp": 200},
+        {"label": "🧠 Сеньор", "min_xp": 500},
+        {"label": "🏆 AI Мастер", "min_xp": 1000},
+    ],
+    "levels": {"xp_per_level": 250},
+    "coins": {"xp_to_coin_ratio": 10},
+    "quiz": {
+        "questions_per_round": 5,
+        "points": {"easy": 10, "medium": 20, "hard": 40},
+    },
+    "daily_goal": {"target_answers": 10},
+}
+
+
+try:
+    _cards_cache = _load_json("cards.json")
+except FileNotFoundError:
+    _cards_cache = {}
+    print("[WARN] cards.json не найден, флеш-карточки будут пустыми")
+
 
 class UserRegister(BaseModel):
     user_id: int
@@ -21,8 +62,8 @@ class UserRegister(BaseModel):
 
 class AnswerSubmit(BaseModel):
     user_id: int
-    question_id: str
-    answer: str
+    question_id: str = ""
+    answer: str = ""
     is_correct: bool
     difficulty: str = "medium"
 
@@ -34,6 +75,30 @@ class GameResult(BaseModel):
     total_count: int
 
 
+#  /api/...  эндпоинты
+
+
+@app.get("/api/questions")
+async def get_questions():
+    """Все вопросы викторины."""
+    return _questions_cache
+
+
+@app.get("/api/config")
+async def get_config():
+    """Конфиг: ранги, уровни, монеты, настройки квиза."""
+    return _config_cache
+
+
+@app.get("/api/cards")
+async def get_cards():
+    """Колоды флеш-карточек."""
+    return _cards_cache
+
+
+#  Остальные эндпоинты
+
+
 @app.post("/register")
 async def register_user(data: UserRegister):
     pool = app.state.db_pool
@@ -43,7 +108,7 @@ async def register_user(data: UserRegister):
             INSERT INTO users (user_id, username)
             VALUES ($1, $2)
             ON CONFLICT (user_id) DO UPDATE SET username = $2
-        """,
+            """,
             data.user_id,
             data.username,
         )
@@ -56,13 +121,13 @@ async def get_stats(user_id: int):
     stats = await db.get_user(pool, user_id)
     accuracy = await db.get_accuracy(pool, user_id)
     return {
-        "user_id":       user_id,
-        "total_score":   stats["total_score"],
-        "games_played":  stats["games_played"],
-        "correct":       stats["correct_answers"],
+        "user_id": user_id,
+        "total_score": stats["total_score"],
+        "games_played": stats["games_played"],
+        "correct_answers": stats["correct_answers"],
         "total_answers": stats["total_answers"],
-        "accuracy":      round(accuracy, 1),
-        "streak_days":   stats.get("streak_days", 0),
+        "accuracy": round(accuracy, 1),
+        "streak_days": stats.get("streak_days", 0),
     }
 
 
