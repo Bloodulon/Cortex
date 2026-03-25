@@ -122,7 +122,7 @@ async def cmd_start(message: Message, state: FSMContext):
         f"👋 Привет, <b>{name}</b>!\n\n"
         "Добро пожаловать в <b>AI Quiz Bot</b> 🤖\n"
         "Проверь свои знания об искусственном интеллекте!\n"
-        "ВАЖНО: основной функционал находится в Mini App (кнопка слева снизу)\n\n"
+        "<b>ВАЖНО: основной функционал находится в Mini App (кнопка слева снизу)</b>\n\n"
         "Выбери действие:"
     )
     await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
