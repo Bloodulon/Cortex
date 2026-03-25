@@ -199,7 +199,7 @@
       </div>
     </div>
     <!-- Messages + Options в одном потоке -->
-    <div class="px-5 py-4 space-y-4 pb-32" id="quiz-messages">
+    <div class="px-5 py-4 space-y-4 pb-40" id="quiz-messages">
       <div class="flex gap-3">
         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0 mt-1">
           <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 1">psychology</span>
@@ -237,7 +237,7 @@
     <span class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">4 модуля</span>
   </div>
   <div class="space-y-3">
-    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group">
+    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group" onclick="window.open('https://rus.bookmate.com/reader/CpT50mOb?resource=book','_blank')">
       <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-tertiary/20 flex items-center justify-center shrink-0 relative">
         <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">menu_book</span>
         <div class="absolute -top-1.5 -right-1.5 bg-surface-container-lowest px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-outline-variant font-mono">EN</div>
@@ -252,7 +252,7 @@
       </div>
       <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
     </div>
-    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border-l-4 border-tertiary group">
+    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border-l-4 border-tertiary group" onclick="window.open('https://youtube.com/results?search_query=neural+networks+course','_blank')">
       <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-tertiary/20 to-primary/20 flex items-center justify-center shrink-0 relative">
         <span class="material-symbols-outlined text-tertiary text-2xl" style="font-variation-settings:'FILL' 1">hub</span>
         <div class="absolute -top-1.5 -right-1.5 bg-surface-container-lowest px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-outline-variant font-mono">RU</div>
@@ -267,7 +267,7 @@
       </div>
       <span class="material-symbols-outlined text-outline group-hover:text-tertiary transition-colors">chevron_right</span>
     </div>
-    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group">
+    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group" onclick="window.open('https://www.khanacademy.org/computing/computer-science/algorithms','_blank')">
       <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center shrink-0 relative">
         <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">data_object</span>
         <div class="absolute -top-1.5 -right-1.5 bg-surface-container-lowest px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-outline-variant font-mono">EN</div>
@@ -282,7 +282,7 @@
       </div>
       <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
     </div>
-    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group">
+    <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group" onclick="window.open('https://cs50.harvard.edu/x/','_blank')">
       <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-500/20 to-blue-500/20 flex items-center justify-center shrink-0 relative">
         <span class="material-symbols-outlined text-on-surface-variant text-2xl">terminal</span>
         <div class="absolute -top-1.5 -right-1.5 flex gap-0.5">
@@ -313,98 +313,86 @@
 
 <!-- ───── PAGE: СЛОВАРЬ ───── -->
 <div class="page" id="page-dictionary">
-  <section class="relative px-5 pt-8 pb-10 overflow-hidden bg-gradient-to-b from-primary/10 to-transparent">
-    <div class="absolute -top-16 -right-16 w-56 h-56 bg-primary/15 rounded-full blur-[80px] pointer-events-none"></div>
-    <div class="relative flex flex-col items-center text-center">
-      <div class="w-16 h-16 mb-4 flex items-center justify-center rounded-2xl bg-primary glow-blue">
-        <span class="material-symbols-outlined text-3xl text-on-primary" style="font-variation-settings:'FILL' 1">menu_book</span>
-      </div>
-      <h1 class="text-2xl font-extrabold tracking-tight mb-1">Ваш словарь</h1>
-      <p class="text-on-surface-variant text-sm max-w-[260px] leading-relaxed mb-6">Персональный лексикон, созданный вашим путём обучения.</p>
-      <div class="flex p-1 bg-surface-container-highest rounded-full w-full max-w-xs border border-white/5">
-        <button class="toggle-btn flex-1 py-2.5 text-sm font-semibold text-on-surface-variant rounded-full" id="dict-toggle-courses" onclick="dictToggle('courses')">Курсы</button>
-        <button class="toggle-btn active flex-1 py-2.5 text-sm font-semibold rounded-full" id="dict-toggle-words" onclick="dictToggle('words')">Мои слова</button>
-      </div>
-    </div>
-  </section>
-  <div class="px-5 space-y-5 pb-6">
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="startFlashcards('all')" class="flex flex-col items-start p-4 rounded-xl bg-gradient-to-br from-primary to-primary-dim card-hover text-left glow-blue">
-          <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-white text-lg" style="font-variation-settings:'FILL' 1">auto_awesome</span>
-          </div>
-          <span class="text-on-primary font-bold leading-tight">Повтор с ИИ</span>
-          <span class="text-on-primary/70 text-[9px] uppercase tracking-widest mt-1 font-mono">УМНАЯ АДАПТАЦИЯ</span>
-        </button>
 
-        <button onclick="startFlashcards('ml_basics')" class="flex flex-col items-start p-4 rounded-xl bg-surface-container-highest card-hover text-left border border-white/5">
-          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings:'FILL' 1">style</span>
-          </div>
-          <span class="text-on-surface font-bold leading-tight">Повтор</span>
-          <span class="text-on-surface-variant text-[9px] uppercase tracking-widest mt-1 font-mono">КАРТОЧКИ</span>
-        </button>
-      </div>
-    <div>
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold">Активные словари</h2>
-        <span class="text-xs text-primary font-semibold tracking-wider uppercase font-mono">Все</span>
-      </div>
-      <div class="space-y-3">
-        <div class="glass rounded-xl p-4 flex items-center justify-between card-hover border border-white/5 group">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1">psychology</span>
-            </div>
-            <div>
-              <h3 class="font-semibold text-sm">Терминология машинного обучения</h3>
-              <div class="flex items-center gap-1.5 mt-1">
-                <span class="px-1.5 py-0.5 rounded bg-surface-container-high text-[9px] font-bold text-on-surface-variant uppercase font-mono">RU</span>
-                <span class="material-symbols-outlined text-[11px] text-outline">arrow_forward</span>
-                <span class="px-1.5 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase font-mono">EN</span>
-                <span class="ml-1 text-[10px] text-on-surface-variant font-mono">75 слов</span>
-              </div>
-            </div>
-          </div>
-          <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+  <!-- Главный вид -->
+  <div id="dict-main">
+    <section class="relative px-5 pt-6 pb-4 overflow-hidden">
+      <div class="absolute -top-16 -right-16 w-56 h-56 bg-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
+      <div class="relative">
+        <h1 class="text-2xl font-extrabold tracking-tight mb-1">Словарь</h1>
+        <p class="text-on-surface-variant text-sm mb-4">Флеш-карточки для изучения терминов AI</p>
+        <div class="relative mb-4">
+          <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+          <input id="dict-search" oninput="dictSearch(this.value)" class="w-full bg-surface-container-highest border border-white/5 rounded-xl py-3.5 pl-11 pr-4 text-on-surface placeholder:text-on-surface-variant focus:ring-2 focus:ring-primary/30 outline-none text-sm transition-all" placeholder="Поиск терминов..."/>
         </div>
-        <div class="glass rounded-xl p-4 flex items-center justify-between card-hover border border-white/5 group opacity-75">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 1">analytics</span>
-            </div>
-            <div>
-              <h3 class="font-semibold text-sm">Основы Data Science</h3>
-              <div class="flex items-center gap-1.5 mt-1">
-                <span class="px-1.5 py-0.5 rounded bg-surface-container-high text-[9px] font-bold text-on-surface-variant uppercase font-mono">RU</span>
-                <span class="material-symbols-outlined text-[11px] text-outline">arrow_forward</span>
-                <span class="px-1.5 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase font-mono">EN</span>
-                <span class="ml-1 text-[10px] text-on-surface-variant font-mono">12 слов</span>
-              </div>
-            </div>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="bg-surface-container rounded-xl p-3 text-center border border-white/5">
+            <p class="text-lg font-bold text-primary font-mono" id="dict-total-count">—</p>
+            <p class="text-[9px] text-on-surface-variant uppercase font-mono tracking-wider mt-0.5">Всего</p>
           </div>
-          <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+          <div class="bg-surface-container rounded-xl p-3 text-center border border-white/5">
+            <p class="text-lg font-bold text-green-400 font-mono" id="dict-learned-count">—</p>
+            <p class="text-[9px] text-on-surface-variant uppercase font-mono tracking-wider mt-0.5">Изучено</p>
+          </div>
+          <div class="bg-surface-container rounded-xl p-3 text-center border border-white/5">
+            <p class="text-lg font-bold text-tertiary font-mono" id="dict-streak">—</p>
+            <p class="text-[9px] text-on-surface-variant uppercase font-mono tracking-wider mt-0.5">Серия</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-3 border border-white/5 mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs text-on-surface-variant font-mono">Прогресс изучения</span>
+            <span class="text-xs font-bold text-primary font-mono" id="dict-progress-pct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="dict-progress-bar" style="width:0%"></div></div>
         </div>
       </div>
+    </section>
+    <div class="px-5 space-y-3 pb-28" id="dict-decks-list">
+      <div class="flex items-center justify-center py-8 text-on-surface-variant text-sm font-mono">Загрузка...</div>
     </div>
-    <div class="grid grid-cols-2 gap-3">
-      <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-primary">
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest font-mono">Освоение</p>
-        <p class="text-2xl font-black mt-1 font-mono">42%</p>
-        <div class="progress-bar mt-3"><div class="progress-fill" style="width:42%"></div></div>
-      </div>
-      <div class="bg-surface-container-low rounded-xl p-4 border-l-4 border-tertiary">
-        <p class="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest font-mono">Серия</p>
-        <p class="text-2xl font-black mt-1" id="dict-streak">— дней</p>
-        <div class="flex gap-1 mt-3">
-          <div class="w-2 h-2 rounded-full bg-tertiary"></div>
-          <div class="w-2 h-2 rounded-full bg-tertiary"></div>
-          <div class="w-2 h-2 rounded-full bg-tertiary"></div>
-          <div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+  </div>
+
+  <!-- Режим карточек -->
+  <div id="dict-cards-mode" class="hidden">
+    <div class="sticky top-14 z-40 glass border-b border-white/5 px-5 py-3 flex items-center justify-between">
+      <button onclick="dictCloseCards()" class="flex items-center gap-2 text-on-surface-variant card-hover">
+        <span class="material-symbols-outlined">arrow_back</span>
+        <span class="text-sm font-mono">Назад</span>
+      </button>
+      <span class="text-xs font-mono text-on-surface-variant font-bold" id="cards-progress-text">0/0</span>
+      <div class="w-12"></div>
+    </div>
+    <div class="px-5 py-6 flex flex-col items-center gap-5">
+      <div id="flashcard" onclick="dictFlipCard()" class="w-full min-h-56 glass rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 text-center cursor-pointer card-hover relative overflow-hidden glow-blue select-none">
+        <div class="absolute top-3 right-3">
+          <span class="text-[9px] font-mono text-on-surface-variant uppercase tracking-widest" id="card-deck-label">—</span>
         </div>
+        <div id="card-front">
+          <p class="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest mb-3">Термин EN</p>
+          <p class="text-2xl font-extrabold tracking-tight" id="card-term">—</p>
+          <p class="text-xs text-on-surface-variant mt-4 font-mono">👆 нажми чтобы перевернуть</p>
+        </div>
+        <div id="card-back" class="hidden">
+          <p class="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest mb-3">Перевод RU</p>
+          <p class="text-xl font-bold text-primary mb-3" id="card-translation">—</p>
+          <p class="text-sm text-on-surface-variant leading-relaxed" id="card-definition">—</p>
+        </div>
+      </div>
+      <div class="w-full progress-bar">
+        <div class="progress-fill" id="cards-progress-bar" style="width:0%"></div>
+      </div>
+      <div class="w-full grid grid-cols-2 gap-3" id="cards-buttons" style="display:none;">
+        <button onclick="dictCardResult(false)" class="py-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-bold flex items-center justify-center gap-2 card-hover active:scale-95 transition-all">
+          <span class="material-symbols-outlined">close</span>Не знаю
+        </button>
+        <button onclick="dictCardResult(true)" class="py-4 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold flex items-center justify-center gap-2 card-hover active:scale-95 transition-all">
+          <span class="material-symbols-outlined">check</span>Знаю
+        </button>
       </div>
     </div>
   </div>
+
 </div>
 
 <!-- ───── PAGE: РЕЙТИНГ ───── -->

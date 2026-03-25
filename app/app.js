@@ -20,24 +20,18 @@ let CONFIG = {
 // ── Загрузка JSON ─────────────────────────
 async function loadData() {
   try {
-    const [qRes, cRes, fRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/api/questions`),
-      fetch(`${API_BASE_URL}/api/config`),
-      fetch(`${API_BASE_URL}/api/cards`)
+    const [qRes, cRes] = await Promise.all([
+      fetch("./questions.json"),
+      fetch("./config.json")
     ]);
-
-    if (!qRes.ok || !cRes.ok || !fRes.ok) {
-        throw new Error("Один из API-эндпоинтов недоступен");
-    }
-
     QUIZ_QUESTIONS = await qRes.json();
     CONFIG = await cRes.json();
-    FLASHCARDS_DATA = await fRes.json();
-
-    console.log(`[Data] Успешно загружено: ${QUIZ_QUESTIONS.length} вопросов`);
+    console.log(`[Data] Загружено ${QUIZ_QUESTIONS.length} вопросов`);
   } catch (e) {
-    console.warn("[Data] Ошибка загрузки через API, используем встроенный конфиг:", e.message);
+    console.warn("[Data] Не удалось загрузить JSON, используем fallback:", e.message);
   }
+  // Словарь грузим отдельно
+  await loadDictionary();
 }
 
 // ── API ──────────────────────────────────────
@@ -128,8 +122,10 @@ function navigate(page) {
 
   window.scrollTo({ top: 0, behavior: "instant" });
 
-  if (page === "rating")  loadLeaderboard();
+  if (page === "rating")     loadLeaderboard();
+
   if (page === "profile" && window.telegramUserId) loadProfileStats(window.telegramUserId);
+  if (page === "dictionary") dictRender();
 }
 
 // ── Quiz open/close ───────────────────────────
@@ -219,11 +215,6 @@ async function loadUserStats(userId) {
   const stats = await getUserStats(userId);
   if (!stats) return;
 
-  const accuracy = stats.accuracy || 0;
-  setEl("dict-mastery-text", accuracy + "%");
-  const masteryBar = document.getElementById("dict-mastery-bar");
-  if (masteryBar) masteryBar.style.width = accuracy + "%";
-
   const score = stats.total_score;
   const level = getLevel(score);
   const rank  = getRankLabel(score);
@@ -312,7 +303,9 @@ async function loadLeaderboard() {
   }).join("");
 }
 
-// ── Викторина ────────────────────────────────
+// ══════════════════════════════════════════
+//  QUIZ
+// ══════════════════════════════════════════
 
 let quizState = { questions: [], currentIndex: 0, score: 0, correctCount: 0, locked: false };
 
@@ -544,140 +537,278 @@ async function quizFinish() {
   }
 }
 
-function startFlashcards(deckKey) {
-  const deck = FLASHCARDS_DATA[deckKey];
-  if (!deck) return;
-
-  flashcardState = {
-    deck: shuffleArray(deck),
-    currentIndex: 0,
-    correctCount: 0,
-    isFlipped: false
-  };
-
-  navigate('flashcards');
-  renderFlashcard();
-}
-
-function renderFlashcard() {
-  const card = flashcardState.deck[flashcardState.currentIndex];
-  const container = document.getElementById('flashcard-container');
-
-  setEl('flashcard-term', card.term);
-  setEl('flashcard-definition', card.definition);
-  setEl('flashcard-counter', `${flashcardState.currentIndex + 1} / ${flashcardState.deck.length}`);
-
-  container.classList.remove('is-flipped');
-  flashcardState.isFlipped = false;
-}
-
-function flipCard() {
-  const container = document.getElementById('flashcard-container');
-  container.classList.toggle('is-flipped');
-  flashcardState.isFlipped = !flashcardState.isFlipped;
-}
-
-async function nextFlashcard(known) {
-  if (known) flashcardState.correctCount++;
-
-  if (window.telegramUserId) {
-    await apiRequest("/answer", {
-      method: "POST",
-      body: JSON.stringify({
-        user_id: window.telegramUserId,
-        is_correct: known,
-        difficulty: "easy"
-      })
-    });
-  }
-
-  flashcardState.currentIndex++;
-
-  if (flashcardState.currentIndex < flashcardState.deck.length) {
-    renderFlashcard();
-  } else {
-    finishFlashcards();
-  }
-}
-
-function startFlashcards(deckKey) {
-  const deck = FLASHCARDS_DATA[deckKey];
-  if (!deck) return;
-
-  flashcardState = {
-    deck: shuffleArray(deck),
-    currentIndex: 0,
-    correctCount: 0,
-    isFlipped: false
-  };
-
-  navigate('flashcards');
-  renderFlashcard();
-}
-
-function renderFlashcard() {
-  const card = flashcardState.deck[flashcardState.currentIndex];
-  const container = document.getElementById('flashcard-container');
-
-  setEl('flashcard-term', card.term);
-  setEl('flashcard-definition', card.definition);
-  setEl('flashcard-counter', `${flashcardState.currentIndex + 1} / ${flashcardState.deck.length}`);
-
-  container.classList.remove('is-flipped');
-  flashcardState.isFlipped = false;
-}
-
-function flipCard() {
-  const container = document.getElementById('flashcard-container');
-  container.classList.toggle('is-flipped');
-  flashcardState.isFlipped = !flashcardState.isFlipped;
-}
-
-async function nextFlashcard(known) {
-  if (known) flashcardState.correctCount++;
-
-  if (window.telegramUserId) {
-    await apiRequest("/answer", {
-      method: "POST",
-      body: JSON.stringify({
-        user_id: window.telegramUserId,
-        is_correct: known,
-        difficulty: "easy"
-      })
-    });
-  }
-
-  flashcardState.currentIndex++;
-
-  if (flashcardState.currentIndex < flashcardState.deck.length) {
-    renderFlashcard();
-  } else {
-    finishFlashcards();
-  }
-}
-
-async function finishFlashcards() {
-  const total = flashcardState.deck.length;
-  const xpEarned = flashcardState.correctCount * 5;
-
-  if (window.telegramUserId) {
-    await finishGame({
-      user_id: window.telegramUserId,
-      score: xpEarned,
-      correct_count: flashcardState.correctCount,
-      total_count: total
-    });
-    loadUserStats(window.telegramUserId);
-  }
-
-  alert(`Повторение завершено! +${xpEarned} XP`);
-  navigate('dictionary');
-}
-
 function quizRestart() { quizStart(); }
+
+
+// ══════════════════════════════════════════
+//  DICTIONARY
+// ══════════════════════════════════════════
+
+let CARDS_DATA = {};       // данные из cards.json
+let dictLearnedIds = {};   // { "deck:id": true }
+let dictCardQueue  = [];
+let dictCardIndex  = 0;
+let dictCardFlipped = false;
+let dictSearchQuery = "";
+
+// Загружаем cards.json
+async function loadCards() {
+  try {
+    const res = await fetch("./cards.json");
+    CARDS_DATA = await res.json();
+  } catch (e) {
+    console.warn("[Dict] cards.json не загружен:", e.message);
+    CARDS_DATA = {};
+  }
+  try { dictLearnedIds = JSON.parse(localStorage.getItem("cortex_learned_v2") || "{}"); } catch { dictLearnedIds = {}; }
+  dictRenderDecks();
+}
+
+function dictRender() {
+  dictRenderDecks();
+}
+
+// Считаем общую статистику
+function dictGetStats() {
+  let total = 0, learned = 0;
+  Object.entries(CARDS_DATA).forEach(([deckId, cards]) => {
+    cards.forEach(c => {
+      total++;
+      if (dictLearnedIds[deckId + ":" + c.id]) learned++;
+    });
+  });
+  return { total, learned };
+}
+
+// Имена колод для отображения
+const DECK_NAMES = {
+  ml_basics:  { title: "Основы ML",      icon: "psychology", color: "primary"   },
+  algorithms: { title: "Алгоритмы",      icon: "data_object", color: "tertiary" },
+  llm:        { title: "LLM и AI",       icon: "smart_toy",   color: "secondary" },
+};
+
+function dictGetDeckName(id) {
+  return DECK_NAMES[id]?.title || id;
+}
+
+function dictRenderDecks() {
+  const { total, learned } = dictGetStats();
+  const pct = total > 0 ? Math.round(learned / total * 100) : 0;
+
+  setEl("dict-total-count",   total);
+  setEl("dict-learned-count", learned);
+  setEl("dict-progress-pct",  pct + "%");
+  const bar = document.getElementById("dict-progress-bar");
+  if (bar) bar.style.width = pct + "%";
+
+  const container = document.getElementById("dict-decks-list");
+  if (!container) return;
+
+  const deckIds = Object.keys(CARDS_DATA);
+  if (!deckIds.length) {
+    container.innerHTML = `<div class="text-center py-10 text-on-surface-variant text-sm font-mono">Карточки не загружены</div>`;
+    return;
+  }
+
+  // Кнопка "Все карточки"
+  const allCount = deckIds.reduce((s, id) => s + CARDS_DATA[id].length, 0);
+  const allLearned = deckIds.reduce((s, id) => s + CARDS_DATA[id].filter(c => dictLearnedIds[id + ":" + c.id]).length, 0);
+
+  let html = `
+    <button onclick="dictStartCards('all')" class="w-full glass rounded-xl p-4 flex items-center gap-4 card-hover border border-primary/20 glow-blue mb-1">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-dim flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-on-primary text-xl" style="font-variation-settings:'FILL' 1">style</span>
+      </div>
+      <div class="flex-1 text-left">
+        <p class="font-bold">Все карточки</p>
+        <p class="text-xs text-on-surface-variant font-mono mt-0.5">${allLearned}/${allCount} изучено</p>
+        <div class="progress-bar mt-2"><div class="progress-fill" style="width:${allCount>0?Math.round(allLearned/allCount*100):0}%"></div></div>
+      </div>
+      <span class="material-symbols-outlined text-primary">play_arrow</span>
+    </button>`;
+
+  deckIds.forEach(deckId => {
+    const cards   = CARDS_DATA[deckId];
+    const info    = DECK_NAMES[deckId] || { title: deckId, icon: "menu_book", color: "primary" };
+    const lrnd    = cards.filter(c => dictLearnedIds[deckId + ":" + c.id]).length;
+    const pctD    = Math.round(lrnd / cards.length * 100);
+    const colorMap = { primary: "from-primary/20 to-primary-dim/20 text-primary", tertiary: "from-tertiary/20 to-purple-500/20 text-tertiary", secondary: "from-secondary/20 to-pink-500/20 text-secondary" };
+    const col = colorMap[info.color] || colorMap.primary;
+
+    html += `
+      <div class="glass rounded-xl p-4 flex items-center gap-4 card-hover border border-white/5 group" onclick="dictStartCards('${deckId}')">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${col.split(' ').slice(0,2).join(' ')} flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined ${col.split(' ')[2]} text-xl" style="font-variation-settings:'FILL' 1">${info.icon}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <p class="font-bold text-sm">${info.title}</p>
+            <span class="text-[10px] font-mono text-on-surface-variant">${lrnd}/${cards.length}</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pctD}%"></div></div>
+        </div>
+        <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+
+  // Поиск — фильтруем список
+  if (dictSearchQuery) dictSearch(dictSearchQuery);
+}
+
+function dictSearch(query) {
+  dictSearchQuery = query.trim().toLowerCase();
+  if (!dictSearchQuery) { dictRenderDecks(); return; }
+
+  // Показываем список совпадений вместо колод
+  const results = [];
+  Object.entries(CARDS_DATA).forEach(([deckId, cards]) => {
+    cards.forEach(c => {
+      if (
+        c.term.toLowerCase().includes(dictSearchQuery) ||
+        (c.translation || "").toLowerCase().includes(dictSearchQuery) ||
+        (c.definition || "").toLowerCase().includes(dictSearchQuery)
+      ) {
+        results.push({ ...c, deckId, deckName: dictGetDeckName(deckId) });
+      }
+    });
+  });
+
+  const container = document.getElementById("dict-decks-list");
+  if (!container) return;
+
+  if (!results.length) {
+    container.innerHTML = `<div class="flex flex-col items-center py-10 gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-4xl">search_off</span><p class="text-sm font-mono">Ничего не найдено</p></div>`;
+    return;
+  }
+
+  container.innerHTML = results.map(t => {
+    const key = t.deckId + ":" + t.id;
+    const learned = dictLearnedIds[key];
+    return `
+      <div class="glass rounded-xl p-4 border border-white/5 card-hover" onclick="dictToggleLearned('${key}')">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[9px] font-bold uppercase font-mono text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high">${t.deckName}</span>
+              ${learned ? '<span class="text-[9px] font-bold text-green-400 px-1.5 py-0.5 rounded bg-green-500/10">✓ изучено</span>' : ""}
+            </div>
+            <p class="font-bold text-sm">${t.term}</p>
+            ${t.translation ? `<p class="text-primary text-sm mt-0.5">${t.translation}</p>` : ""}
+            <p class="text-on-surface-variant text-xs leading-relaxed mt-1.5">${t.definition}</p>
+          </div>
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${learned ? "bg-green-500/20" : "bg-surface-container"}">
+            <span class="material-symbols-outlined text-sm ${learned ? "text-green-400" : "text-on-surface-variant"}" style="font-variation-settings:'FILL' ${learned ? 1 : 0}">check_circle</span>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function dictToggleLearned(key) {
+  dictLearnedIds[key] = !dictLearnedIds[key];
+  localStorage.setItem("cortex_learned_v2", JSON.stringify(dictLearnedIds));
+  dictRenderDecks();
+}
+
+// ── Карточки ─────────────────────────────
+function dictStartCards(deckId) {
+  let cards = [];
+  if (deckId === "all") {
+    Object.entries(CARDS_DATA).forEach(([dId, dCards]) => {
+      dCards.forEach(c => cards.push({ ...c, deckId: dId, deckName: dictGetDeckName(dId) }));
+    });
+  } else {
+    (CARDS_DATA[deckId] || []).forEach(c => cards.push({ ...c, deckId, deckName: dictGetDeckName(deckId) }));
+  }
+
+  if (!cards.length) { showDictToast("Карточки не найдены"); return; }
+
+  // Неизученные сначала
+  const unlearned = cards.filter(c => !dictLearnedIds[c.deckId + ":" + c.id]);
+  const learned   = cards.filter(c =>  dictLearnedIds[c.deckId + ":" + c.id]);
+  dictCardQueue   = [...shuffleDict(unlearned), ...shuffleDict(learned)];
+  dictCardIndex   = 0;
+  dictCardFlipped = false;
+
+  document.getElementById("dict-main").classList.add("hidden");
+  document.getElementById("dict-cards-mode").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "instant" });
+  dictShowCard();
+}
+
+function dictCloseCards() {
+  document.getElementById("dict-cards-mode").classList.add("hidden");
+  document.getElementById("dict-main").classList.remove("hidden");
+  dictRenderDecks();
+}
+
+function dictShowCard() {
+  if (!dictCardQueue.length) { dictCloseCards(); return; }
+  const t = dictCardQueue[dictCardIndex];
+
+  setEl("card-term",        t.term);
+  setEl("card-translation", t.translation || "");
+  setEl("card-definition",  t.definition || "");
+  setEl("card-deck-label",  t.deckName || "");
+  setEl("cards-progress-text", `${dictCardIndex + 1}/${dictCardQueue.length}`);
+
+  const bar = document.getElementById("cards-progress-bar");
+  if (bar) bar.style.width = (dictCardIndex / dictCardQueue.length * 100) + "%";
+
+  dictCardFlipped = false;
+  document.getElementById("card-front").classList.remove("hidden");
+  document.getElementById("card-back").classList.add("hidden");
+  document.getElementById("cards-buttons").style.display = "none";
+}
+
+function dictFlipCard() {
+  if (dictCardFlipped) return;
+  dictCardFlipped = true;
+  document.getElementById("card-front").classList.add("hidden");
+  document.getElementById("card-back").classList.remove("hidden");
+  document.getElementById("cards-buttons").style.display = "grid";
+}
+
+function dictCardResult(success) {
+  const t   = dictCardQueue[dictCardIndex];
+  const key = t.deckId + ":" + t.id;
+  if (success) dictLearnedIds[key] = true;
+  localStorage.setItem("cortex_learned_v2", JSON.stringify(dictLearnedIds));
+
+  dictCardIndex++;
+  if (dictCardIndex >= dictCardQueue.length) {
+    document.getElementById("dict-cards-mode").classList.add("hidden");
+    document.getElementById("dict-main").classList.remove("hidden");
+    dictRenderDecks();
+    showDictToast("🎉 Колода пройдена!");
+  } else {
+    dictShowCard();
+  }
+}
+
+function showDictToast(msg) {
+  const t = document.createElement("div");
+  t.className = "fixed top-20 left-1/2 -translate-x-1/2 z-[100] bg-surface-container-highest border border-white/10 text-on-surface text-sm font-semibold px-5 py-3 rounded-full shadow-xl whitespace-nowrap";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+function shuffleDict(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // ── Init ─────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   await loadData();
+  await loadTerms();
+  await loadCards();
   setTimeout(initTelegram, 150);
 });
