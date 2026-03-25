@@ -23,7 +23,8 @@ async function loadData() {
   try {
     const [qRes, cRes] = await Promise.all([
       fetch(`${API_BASE_URL}/api/questions`),
-      fetch(`${API_BASE_URL}/api/config`)
+      fetch(`${API_BASE_URL}/api/config`),
+      fetch(`${API_BASE_URL}/api/cards`)
     ]);
 
     if (!qRes.ok || !cRes.ok) {
@@ -32,6 +33,7 @@ async function loadData() {
 
     QUIZ_QUESTIONS = await qRes.json();
     CONFIG = await cRes.json();
+    CARDS_DATA = await cardRes.json();
 
     console.log(`[Data] Успешно загружено ${QUIZ_QUESTIONS.length} вопросов с сервера`);
   } catch (e) {
