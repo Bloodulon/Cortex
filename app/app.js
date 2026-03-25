@@ -833,6 +833,76 @@ function shuffleDict(arr) {
   return a;
 }
 
+// ── Модалка стрика ────────────────────────
+function showStreakModal() {
+  const streak = window._currentStreak || 0;
+  const score  = window._currentScore  || 0;
+
+  const modal = document.createElement("div");
+  modal.id = "streak-modal";
+  modal.className = "fixed inset-0 z-[200] flex items-end justify-center p-4 pb-8";
+  modal.innerHTML = `
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeStreakModal()"></div>
+    <div class="relative w-full max-w-sm glass rounded-2xl border border-white/10 p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg">Твоя серия</h3>
+        <button onclick="closeStreakModal()" class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-on-surface-variant text-sm">close</span>
+        </button>
+      </div>
+      <div class="flex items-center justify-center py-4">
+        <div class="text-center">
+          <div class="text-7xl mb-2">${streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "✨"}</div>
+          <p class="text-5xl font-black text-orange-400 font-mono">${streak}</p>
+          <p class="text-on-surface-variant text-sm mt-1 font-mono">${formatDays(streak)} подряд</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-surface-container rounded-xl p-3 text-center">
+          <p class="text-[9px] text-on-surface-variant uppercase font-mono tracking-wider">Всего XP</p>
+          <p class="font-bold text-primary font-mono mt-1">${score.toLocaleString()}</p>
+        </div>
+        <div class="bg-surface-container rounded-xl p-3 text-center">
+          <p class="text-[9px] text-on-surface-variant uppercase font-mono tracking-wider">Статус</p>
+          <p class="font-bold mt-1 text-sm">${streak >= 7 ? "🔥 Горю!" : streak >= 3 ? "⚡ Разгоняюсь" : "🌱 Начало"}</p>
+        </div>
+      </div>
+      <button onclick="shareStats(); closeStreakModal();" class="w-full py-3 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 card-hover">
+        <span class="material-symbols-outlined text-lg">share</span>Поделиться
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function closeStreakModal() {
+  document.getElementById("streak-modal")?.remove();
+}
+
+// ── Share ─────────────────────────────────
+function shareStats() {
+  const streak = window._currentStreak || 0;
+  const score  = window._currentScore  || 0;
+  const rank   = getRankLabel(score);
+
+  const text = `🧠 Cortex AI Quiz\n${rank}\n🔥 Серия: ${formatDays(streak)}\n⚡ ${score.toLocaleString()} XP\n\nПроверь свои знания AI!`;
+  const url  = "https://t.me/ai_education_quiz_bot";
+
+  if (window.Telegram?.WebApp?.openTelegramLink) {
+    const encoded = encodeURIComponent(text + "\n" + url);
+    window.Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+    return;
+  }
+
+  if (navigator.share) {
+    navigator.share({ title: "Cortex AI Quiz", text, url }).catch(() => {});
+    return;
+  }
+
+  navigator.clipboard?.writeText(text + "\n" + url).then(() => {
+    showDictToast("📋 Скопировано в буфер!");
+  });
+}
+
 // ── Init ─────────────────────────────────────
 function initTelegram() {
   console.log("[TG-Init] Запуск инициализации...");

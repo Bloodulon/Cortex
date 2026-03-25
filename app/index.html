@@ -111,11 +111,11 @@
         <div class="progress-fill" id="daily-progress" style="width: 0%"></div>
       </div>
       <div class="flex gap-2">
-        <button class="flex-1 h-11 bg-surface-bright rounded-lg flex items-center justify-center gap-2 card-hover hover:bg-surface-container-high">
+        <button onclick="showStreakModal()" class="flex-1 h-11 bg-surface-bright rounded-lg flex items-center justify-center gap-2 card-hover hover:bg-surface-container-high">
           <span class="material-symbols-outlined text-orange-400 text-xl" style="font-variation-settings:'FILL' 1">local_fire_department</span>
           <span class="text-sm font-semibold" id="streak-label">Серия: — дней</span>
         </button>
-        <button class="w-11 h-11 glass rounded-lg flex items-center justify-center card-hover border border-white/5">
+        <button onclick="shareStats()" class="w-11 h-11 glass rounded-lg flex items-center justify-center card-hover border border-white/5">
           <span class="material-symbols-outlined text-primary text-xl">share</span>
         </button>
       </div>
