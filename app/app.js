@@ -19,19 +19,45 @@ let CONFIG = {
 
 // ── Загрузка JSON ─────────────────────────
 async function loadData() {
+  console.log("[Data] Начинаю загрузку данных с бэкенда...");
   try {
     const [qRes, cRes] = await Promise.all([
-      fetch("./questions.json"),
-      fetch("./config.json")
+      fetch(`${API_BASE_URL}/api/questions`),
+      fetch(`${API_BASE_URL}/api/config`)
     ]);
+
+    if (!qRes.ok || !cRes.ok) {
+        throw new Error(`Ошибка сети: Q:${qRes.status} C:${cRes.status}`);
+    }
+
     QUIZ_QUESTIONS = await qRes.json();
     CONFIG = await cRes.json();
-    console.log(`[Data] Загружено ${QUIZ_QUESTIONS.length} вопросов`);
+
+    console.log(`[Data] Успешно загружено ${QUIZ_QUESTIONS.length} вопросов с сервера`);
   } catch (e) {
-    console.warn("[Data] Не удалось загрузить JSON, используем fallback:", e.message);
+    console.warn("[Data] Ошибка загрузки с бэкенда, используем встроенный конфиг:", e.message);
   }
-  // Словарь грузим отдельно
-  await loadDictionary();
+
+  await loadCards();
+}
+
+async function loadCards() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cards`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    CARDS_DATA = await res.json();
+    console.log("[Dict] Карточки словаря загружены");
+  } catch (e) {
+    console.warn("[Dict] Не удалось загрузить карточки с бэкенда:", e.message);
+    CARDS_DATA = {};
+  }
+
+  try {
+    dictLearnedIds = JSON.parse(localStorage.getItem("cortex_learned_v2") || "{}");
+  } catch {
+    dictLearnedIds = {};
+  }
+  dictRenderDecks();
 }
 
 // ── API ──────────────────────────────────────
