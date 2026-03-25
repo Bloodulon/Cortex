@@ -243,6 +243,8 @@ async function loadUserStats(userId) {
   const level = getLevel(score);
   const rank  = getRankLabel(score);
   const target = CONFIG.daily_goal.target_answers;
+  window._currentScore  = score;
+  window._currentStreak = stats.streak_days || 0;
 
   setEl("header-xp",            score.toLocaleString() + " XP");
   setEl("practice-level-badge", "LVL " + level);
@@ -884,7 +886,7 @@ function shareStats() {
   const score  = window._currentScore  || 0;
   const rank   = getRankLabel(score);
 
-  const text = `🧠 Cortex AI Quiz\n${rank}\n🔥 Серия: ${formatDays(streak)}\n⚡ ${score.toLocaleString()} XP\n\nПроверь свои знания AI!`;
+  const text = `Кортекс ИИ Бот для обучения\n${rank}\n🔥 Серия: ${formatDays(streak)}\n⚡ ${score.toLocaleString()} XP\n\nПроверь свои знания AI!`;
   const url  = "https://t.me/ai_education_quiz_bot";
 
   if (window.Telegram?.WebApp?.openTelegramLink) {
