@@ -121,7 +121,8 @@ async def cmd_start(message: Message, state: FSMContext):
     text = (
         f"👋 Привет, <b>{name}</b>!\n\n"
         "Добро пожаловать в <b>AI Quiz Bot</b> 🤖\n"
-        "Проверь свои знания об искусственном интеллекте!\n\n"
+        "Проверь свои знания об искусственном интеллекте!\n"
+        "ВАЖНО: основной функционал находится в Mini App (кнопка слева снизу)\n\n"
         "Выбери действие:"
     )
     await message.answer(text, reply_markup=main_menu_kb(), parse_mode="HTML")
@@ -165,7 +166,6 @@ async def cb_howto(cb: CallbackQuery):
 @router.callback_query(F.data == "stats")
 async def cb_stats(cb: CallbackQuery, db_pool):
     user_id = cb.from_user.id
-    # Используем await и передаем db_pool
     stats = await db.get_user(db_pool, user_id)
     accuracy = await db.get_accuracy(db_pool, user_id)
 
@@ -272,7 +272,7 @@ async def cb_give_up(cb: CallbackQuery, state: FSMContext, db_pool):
 # ─── Ответ на вопрос ──────────────────────────────────────────────────────────
 
 @router.callback_query(QuizState.answering, F.data.startswith("answer_"))
-async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool): 
+async def cb_answer(cb: CallbackQuery, state: FSMContext, db_pool):
     data = await state.get_data()
     questions: list[dict] = data["questions"]
     idx: int = data["current_index"]
