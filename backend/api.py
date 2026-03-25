@@ -10,7 +10,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://tgbot-cortex.vercel.app"],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
@@ -30,23 +30,15 @@ def _load_json(filename: str):
 
 _questions_cache = _load_json("questions.json")
 
-_config_cache = {
-    "ranks": [
-        {"label": "🐣 Новичок", "min_xp": 0},
-        {"label": "🧑‍💻 Джуниор", "min_xp": 50},
-        {"label": "🚀 Мидл", "min_xp": 200},
-        {"label": "🧠 Сеньор", "min_xp": 500},
-        {"label": "🏆 AI Мастер", "min_xp": 1000},
-    ],
-    "levels": {"xp_per_level": 250},
-    "coins": {"xp_to_coin_ratio": 10},
-    "quiz": {
-        "questions_per_round": 5,
-        "points": {"easy": 10, "medium": 20, "hard": 40},
-    },
-    "daily_goal": {"target_answers": 10},
-}
-
+try:
+    _config_cache = _load_json("config.json")
+except FileNotFoundError:
+    _config_cache = {
+        "ranks": [{"label": "🐣 Новичок", "min_xp": 0}],
+        "levels": {"xp_per_level": 250},
+        "quiz": {"points": {"easy": 10, "medium": 20, "hard": 40}}
+    }
+    print("[WARN] config.json не найден, используется дефолтный конфиг")
 
 try:
     _cards_cache = _load_json("cards.json")
@@ -74,10 +66,6 @@ class GameResult(BaseModel):
     correct_count: int
     total_count: int
 
-
-#  /api/...  эндпоинты
-
-
 @app.get("/api/questions")
 async def get_questions():
     """Все вопросы викторины."""
@@ -94,10 +82,6 @@ async def get_config():
 async def get_cards():
     """Колоды флеш-карточек."""
     return _cards_cache
-
-
-#  Остальные эндпоинты
-
 
 @app.post("/register")
 async def register_user(data: UserRegister):
@@ -154,11 +138,14 @@ async def get_leaderboard():
 @app.post("/answer")
 async def submit_answer(data: AnswerSubmit):
     pool = app.state.db_pool
-    points = {"easy": 10, "medium": 20, "hard": 40}.get(data.difficulty, 20)
+    quiz_cfg = _config_cache.get("quiz", {})
+    points_map = quiz_cfg.get("points", {"easy": 10, "medium": 20, "hard": 40})
+
+    points = points_map.get(data.difficulty, 20)
     earned = points if data.is_correct else 0
+
     await db.update_score(pool, data.user_id, earned, data.is_correct)
     return {"status": "ok", "points": earned}
-
 
 @app.post("/game/finish")
 async def finish_game(data: GameResult):
