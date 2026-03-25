@@ -44,22 +44,18 @@ async function loadData() {
 }
 
 async function loadCards() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/cards`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    CARDS_DATA = await res.json();
-    console.log("[Dict] Карточки словаря загружены");
-  } catch (e) {
-    console.warn("[Dict] Не удалось загрузить карточки с бэкенда:", e.message);
-    CARDS_DATA = {};
+  if (Object.keys(CARDS_DATA).length > 0) {
+      dictRenderDecks();
+      return;
   }
 
   try {
-    dictLearnedIds = JSON.parse(localStorage.getItem("cortex_learned_v2") || "{}");
-  } catch {
-    dictLearnedIds = {};
+    const res = await fetch(`${API_BASE_URL}/api/cards`);
+    CARDS_DATA = await res.json();
+    dictRenderDecks();
+  } catch (e) {
+    console.error("Ошибка загрузки карт:", e);
   }
-  dictRenderDecks();
 }
 
 // ── API ──────────────────────────────────────
@@ -567,11 +563,7 @@ async function quizFinish() {
 
 function quizRestart() { quizStart(); }
 
-
-// ══════════════════════════════════════════
-//  DICTIONARY
-// ══════════════════════════════════════════
-
+// DICT
 let CARDS_DATA = {};
 let dictLearnedIds = {};
 let dictCardQueue  = [];
@@ -579,17 +571,30 @@ let dictCardIndex  = 0;
 let dictCardFlipped = false;
 let dictSearchQuery = "";
 
-// Загружаем cards.json
-async function loadCards() {
+async function loadData() {
+  console.log("[Data] Начинаю загрузку данных с бэкенда...");
   try {
-    const res = await fetch("./cards.json");
-    CARDS_DATA = await res.json();
+    const [qRes, cRes, cardRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/api/questions`),
+      fetch(`${API_BASE_URL}/api/config`),
+      fetch(`${API_BASE_URL}/api/cards`)
+    ]);
+
+    if (!qRes.ok || !cRes.ok || !cardRes.ok) {
+        throw new Error(`Ошибка сети: Q:${qRes.status} C:${cRes.status} Cards:${cardRes.status}`);
+    }
+
+    QUIZ_QUESTIONS = await qRes.json();
+    CONFIG = await cRes.json();
+    CARDS_DATA = await cardRes.json();
+
+    console.log(`[Data] Успешно загружено ${QUIZ_QUESTIONS.length} вопросов и карточки`);
+
+    dictRenderDecks();
+
   } catch (e) {
-    console.warn("[Dict] cards.json не загружен:", e.message);
-    CARDS_DATA = {};
+    console.warn("[Data] Ошибка загрузки с бэкенда:", e.message);
   }
-  try { dictLearnedIds = JSON.parse(localStorage.getItem("cortex_learned_v2") || "{}"); } catch { dictLearnedIds = {}; }
-  dictRenderDecks();
 }
 
 function dictRender() {
