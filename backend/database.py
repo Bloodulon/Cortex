@@ -103,9 +103,9 @@ async def get_leaderboard(pool, limit: int = 10) -> list:
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT user_id, total_score, games_played, correct_answers, total_answers
+            SELECT user_id, username, total_score, games_played, correct_answers, total_answers
             FROM users ORDER BY total_score DESC LIMIT $1
-        """,
+            """,
             limit,
         )
         return [dict(r) for r in rows]
