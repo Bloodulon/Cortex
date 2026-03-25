@@ -886,7 +886,7 @@ function shareStats() {
   const score  = window._currentScore  || 0;
   const rank   = getRankLabel(score);
 
-  const text = `Кортекс ИИ Бот для обучения\n${rank}\n🔥 Серия: ${formatDays(streak)}\n⚡ ${score.toLocaleString()} XP\n\nПроверь свои знания AI!`;
+  const text = `Кортекс ИИ Бот для обучения\n${rank}\nМой профиль:\n🔥 Серия: ${formatDays(streak)}\n⚡ ${score.toLocaleString()} XP\n\nПроверь свои знания AI!`;
   const url  = "https://t.me/ai_education_quiz_bot";
 
   if (window.Telegram?.WebApp?.openTelegramLink) {
