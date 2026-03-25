@@ -544,8 +544,8 @@ function quizRestart() { quizStart(); }
 //  DICTIONARY
 // ══════════════════════════════════════════
 
-let CARDS_DATA = {};       // данные из cards.json
-let dictLearnedIds = {};   // { "deck:id": true }
+let CARDS_DATA = {};
+let dictLearnedIds = {};
 let dictCardQueue  = [];
 let dictCardIndex  = 0;
 let dictCardFlipped = false;
@@ -568,7 +568,6 @@ function dictRender() {
   dictRenderDecks();
 }
 
-// Считаем общую статистику
 function dictGetStats() {
   let total = 0, learned = 0;
   Object.entries(CARDS_DATA).forEach(([deckId, cards]) => {
@@ -580,7 +579,6 @@ function dictGetStats() {
   return { total, learned };
 }
 
-// Имена колод для отображения
 const DECK_NAMES = {
   ml_basics:  { title: "Основы ML",      icon: "psychology", color: "primary"   },
   algorithms: { title: "Алгоритмы",      icon: "data_object", color: "tertiary" },
@@ -610,7 +608,6 @@ function dictRenderDecks() {
     return;
   }
 
-  // Кнопка "Все карточки"
   const allCount = deckIds.reduce((s, id) => s + CARDS_DATA[id].length, 0);
   const allLearned = deckIds.reduce((s, id) => s + CARDS_DATA[id].filter(c => dictLearnedIds[id + ":" + c.id]).length, 0);
 
@@ -653,7 +650,6 @@ function dictRenderDecks() {
 
   container.innerHTML = html;
 
-  // Поиск — фильтруем список
   if (dictSearchQuery) dictSearch(dictSearchQuery);
 }
 
@@ -661,7 +657,6 @@ function dictSearch(query) {
   dictSearchQuery = query.trim().toLowerCase();
   if (!dictSearchQuery) { dictRenderDecks(); return; }
 
-  // Показываем список совпадений вместо колод
   const results = [];
   Object.entries(CARDS_DATA).forEach(([deckId, cards]) => {
     cards.forEach(c => {
@@ -806,9 +801,82 @@ function shuffleDict(arr) {
 }
 
 // ── Init ─────────────────────────────────────
-document.addEventListener("DOMContentLoaded", async () => {
-  await loadData();
-  await loadTerms();
-  await loadCards();
-  setTimeout(initTelegram, 150);
+function initTelegram() {
+  console.log("[TG-Init] Запуск инициализации...");
+  let user = null;
+
+  try {
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+
+      user = tg.initDataUnsafe?.user || null;
+      console.log("[TG-Init] Данные WebApp получены:", user);
+    } else {
+      console.warn("[TG-Init] window.Telegram.WebApp не найден. Проверьте подключение скрипта в index.html");
+    }
+  } catch (e) {
+    console.error("[TG-Init] Критическая ошибка при обращении к TG API:", e);
+  }
+
+  if (user && user.id) {
+    window.telegramUserId = user.id;
+
+    const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username || "Пользователь";
+    const photoUrl = user.photo_url || null;
+
+    console.log(`[TG-Init] Авторизован: ${name} (ID: ${user.id})`);
+
+    apiRequest("/register", {
+      method: "POST",
+      body: JSON.stringify({ user_id: user.id, username: name })
+    }).then(res => {
+      if(res) console.log("[API] Регистрация на сервере прошла успешно");
+    });
+
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = name);
+    setAvatar("practice-avatar-wrap", photoUrl, name);
+    setAvatar("profile-avatar-wrap",  photoUrl, name);
+
+    loadUserStats(user.id);
+    loadProfileStats(user.id);
+
+  } else {
+    console.warn("[TG-Init] Работа в режиме Гостя (ID не найден)");
+
+    document.querySelectorAll(".tg-username").forEach(el => el.textContent = "Гость");
+    setAvatar("practice-avatar-wrap", null, "Г");
+    setAvatar("profile-avatar-wrap",  null, "Г");
+
+    setEl("header-xp",            "0 XP");
+    setEl("practice-level-badge", "LVL 1");
+    setEl("practice-rank",        getRankLabel(0));
+    setEl("streak-label",         "Начни игру!");
+    setEl("daily-label",          "0");
+    setEl("practice-games",       "0 игр");
+    setEl("practice-score",       "0 XP");
+    setEl("practice-accuracy",    "0%");
+
+    setEl("profile-xp",           "0");
+    setEl("profile-games",        "0");
+    setEl("profile-accuracy",     "0%");
+    setEl("profile-xp-label",     "0 / 2000 XP");
+    setEl("profile-level-badge",  "LVL 1");
+    setEl("profile-rank-label",   getRankLabel(0));
+    setEl("profile-daily-pct",    "0%");
+    setEl("profile-balance",      "0 монет");
+
+    const bars = ["practice-accuracy-bar", "daily-progress", "profile-level-bar", "dict-mastery-bar"];
+    bars.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.width = "0%";
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initTelegram();
+
+  loadData();
 });
