@@ -2,6 +2,7 @@ import json
 import random
 from pathlib import Path
 
+from config import POINTS, QUESTIONS_PER_ROUND, RANKS
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
@@ -37,16 +38,14 @@ def main_menu_kb() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📖 Как играть",      callback_data="howto")],
     ])
 
-
 def level_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🟢 Новичок (+10 очков)",  callback_data="level_easy")],
-        [InlineKeyboardButton(text="🟡 Средний (+20 очков)",  callback_data="level_medium")],
-        [InlineKeyboardButton(text="🔴 Эксперт (+40 очков)",  callback_data="level_hard")],
+        [InlineKeyboardButton(text=f"🟢 Новичок (+{POINTS['easy']} очков)",  callback_data="level_easy")],
+        [InlineKeyboardButton(text=f"🟡 Средний (+{POINTS['medium']} очков)", callback_data="level_medium")],
+        [InlineKeyboardButton(text=f"🔴 Эксперт (+{POINTS['hard']} очков)",  callback_data="level_hard")],
         [InlineKeyboardButton(text="🌈 Случайный микс",       callback_data="level_mix")],
         [InlineKeyboardButton(text="◀️ Назад",                callback_data="back_menu")],
     ])
-
 
 def answer_kb(question: dict, hint_used: bool) -> InlineKeyboardMarkup:
     rows = []
@@ -150,9 +149,9 @@ async def cb_howto(cb: CallbackQuery):
         "1️⃣ Выбери уровень сложности\n"
         f"2️⃣ Ответь на {QUESTIONS_PER_ROUND} вопросов об AI/ML\n"
         "3️⃣ За каждый правильный ответ — очки:\n"
-        "   🟢 Новичок: +10 очков\n"
-        "   🟡 Средний: +20 очков\n"
-        "   🔴 Эксперт: +40 очков\n\n"
+        f"   🟢 Новичок: +{POINTS['easy']} очков\n"
+        f"   🟡 Средний: +{POINTS['medium']} очков\n"
+        f"   🔴 Эксперт: +{POINTS['hard']} очков\n\n"
         "💡 Можешь взять подсказку — но это стоит 5 очков\n"
         "📖 После каждого ответа — объяснение темы\n\n"
         "<i>Учись, набирай очки, становись AI-экспертом!</i>"
@@ -170,16 +169,12 @@ async def cb_stats(cb: CallbackQuery, db_pool):
     accuracy = await db.get_accuracy(db_pool, user_id)
 
     score = stats["total_score"]
-    if score < 50:
-        rank = "🐣 Новичок"
-    elif score < 200:
-        rank = "🧑‍💻 Джуниор"
-    elif score < 500:
-        rank = "🚀 Мидл"
-    elif score < 1000:
-        rank = "🧠 Сеньор"
-    else:
-        rank = "🏆 AI Мастер"
+
+    rank = "Неизвестно"
+    for r in RANKS:
+        if r["min_xp"] <= score <= r["max_xp"]:
+            rank = r["label"]
+            break
 
     text = (
         f"📊 <b>Твоя статистика</b>\n\n"
