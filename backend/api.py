@@ -16,6 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ────────── Загрузка JSON-файлов ──────────
 BASE_DIR = Path(__file__).parent
 
 
